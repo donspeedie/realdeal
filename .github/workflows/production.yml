@@ -1,0 +1,93 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy-landing:
+    runs-on: ubuntu-latest
+    name: Deploy Landing to Vercel
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd landing
+          npm ci
+
+      - name: Build
+        run: |
+          cd landing
+          npm run build
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: ./landing
+          vercel-args: '--prod'
+
+  deploy-app:
+    runs-on: ubuntu-latest
+    name: Deploy Flutter App to Firebase
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+
+      - name: Get dependencies
+        run: |
+          cd app
+          flutter pub get
+
+      - name: Build Flutter Web
+        run: |
+          cd app
+          flutter build web --release
+
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: habu-1gxak2
+          channelId: live
+
+  deploy-functions:
+    runs-on: ubuntu-latest
+    name: Deploy Cloud Functions
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: |
+          cd functions
+          npm ci
+
+      - name: Deploy Functions
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only functions
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          PROJECT_ID: habu-1gxak2

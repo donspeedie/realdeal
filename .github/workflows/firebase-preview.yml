@@ -1,0 +1,35 @@
+name: Firebase Preview
+
+on: pull_request
+
+jobs:
+  build-and-preview:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x'
+          channel: 'stable'
+
+      - name: Get Flutter dependencies
+        run: |
+          cd app
+          flutter pub get
+
+      - name: Build Flutter Web
+        run: |
+          cd app
+          flutter build web --release
+
+      - name: Deploy to Firebase Preview Channel
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT }}'
+          projectId: habu-1gxak2
+          channelId: 'pr-${{ github.event.pull_request.number }}'
+          expires: 7d
