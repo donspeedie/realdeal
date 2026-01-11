@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Review current diff with Claude implementer
+
+LOGFILE=~/.claude_logs/$(date +%Y-%m-%d).log
+DIFF_FILE=/tmp/current-$(date +%H%M%S).diff
+
+# Create diff file
+git diff > "$DIFF_FILE"
+
+if [ ! -s "$DIFF_FILE" ]; then
+    echo "No changes to review"
+    rm "$DIFF_FILE"
+    exit 0
+fi
+
+echo "Reviewing diff: $DIFF_FILE" | tee -a "$LOGFILE"
+echo "Diff size: $(wc -l < "$DIFF_FILE") lines" | tee -a "$LOGFILE"
+
+# Send to Claude implementer and log
+claude --impl < "$DIFF_FILE" | tee -a "$LOGFILE"
+
+# Keep diff file for reference
+echo "Diff saved to: $DIFF_FILE" | tee -a "$LOGFILE"

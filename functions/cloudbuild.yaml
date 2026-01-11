@@ -1,0 +1,47 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        # Deploy the function in us-west1 with trigger in us-west2
+        gcloud functions deploy autoRecalculateSavedPropertyV2 \
+          --gen2 \
+          --runtime=nodejs20 \
+          --region=us-west1 \
+          --source=. \
+          --entry-point=autoRecalculateSavedPropertyV2 \
+          --trigger-location=us-west2 \
+          --trigger-event-filters="type=google.cloud.firestore.document.v1.updated" \
+          --trigger-event-filters="database=(default)" \
+          --trigger-event-filters="document=savedProperties/{docId}" \
+          --memory=512Mi \
+          --timeout=540s
+
+
+  # 4️⃣ Deploy cloudCalcs (HTTP SSE streaming)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:latest'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud functions deploy cloudCalcs \
+          --gen2 \
+          --runtime=nodejs20 \
+          --region=us-west1 \
+          --trigger-http \
+          --entry-point=cloudCalcs \
+          --memory=2Gi \
+          --timeout=540s \
+          --min-instances=1 \
+          --max-instances=50
+
+# Optional substitutions
+substitutions:
+  _PROJECT_ID: "habu-1gxak2"
+
+# Timeout for entire build
+timeout: 1800s
+
+options:
+  logging: CLOUD_LOGGING_ONLY

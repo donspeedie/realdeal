@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# ask script wrapper
+
+LOGFILE=~/.claude_logs/$(date +%Y-%m-%d).log
+
+# Send input to Claude and capture output
+claude "$@" | tee -a "$LOGFILE"

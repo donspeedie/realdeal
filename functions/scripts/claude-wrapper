@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Comprehensive Claude wrapper with automatic logging
+
+# Setup logging directory
+LOGDIR=~/.claude_logs
+mkdir -p "$LOGDIR"
+
+# Log files
+LOGFILE="$LOGDIR/$(date +%Y-%m-%d).log"
+SESSION_LOG="$LOGDIR/session-$(date +%Y%m%d-%H%M%S).log"
+
+# Create session header
+{
+    echo "===================="
+    echo "Claude Session: $(date)"
+    echo "Working Directory: $(pwd)"
+    echo "Git Branch: $(git branch --show-current 2>/dev/null || echo 'N/A')"
+    echo "Command: claude $*"
+    echo "===================="
+} | tee -a "$LOGFILE" "$SESSION_LOG"
+
+# Execute Claude and capture everything
+claude "$@" 2>&1 | tee -a "$LOGFILE" "$SESSION_LOG"
+
+# Add session footer
+{
+    echo "Session End: $(date)"
+    echo "===================="
+    echo ""
+} | tee -a "$LOGFILE" "$SESSION_LOG"

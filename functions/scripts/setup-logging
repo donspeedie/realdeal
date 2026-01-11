@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Setup comprehensive Claude logging
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+echo "Setting up comprehensive Claude logging..."
+
+# 1. Make wrapper executable
+chmod +x "$SCRIPT_DIR/claude-wrapper"
+
+# 2. Create logging directory
+mkdir -p ~/.claude_logs
+
+# 3. Create alias file
+ALIAS_FILE=~/.claude_aliases
+cat > "$ALIAS_FILE" << 'EOF'
+# Claude logging aliases
+alias claude-orig='command claude'
+alias claude='~/scripts/claude-wrapper'
+alias claude-logs='ls -la ~/.claude_logs/'
+alias claude-today='cat ~/.claude_logs/$(date +%Y-%m-%d).log'
+alias claude-tail='tail -f ~/.claude_logs/$(date +%Y-%m-%d).log'
+EOF
+
+# 4. Add to shell profile
+for PROFILE in ~/.bashrc ~/.zshrc ~/.profile; do
+    if [[ -f "$PROFILE" ]]; then
+        if ! grep -q "claude_aliases" "$PROFILE"; then
+            echo "" >> "$PROFILE"
+            echo "# Claude logging setup" >> "$PROFILE"
+            echo "source ~/.claude_aliases" >> "$PROFILE"
+            echo "Added Claude logging to $PROFILE"
+        fi
+    fi
+done
+
+# 5. Update project scripts to use absolute paths
+sed -i.bak "s|scripts/claude-wrapper|$SCRIPT_DIR/claude-wrapper|g" "$SCRIPT_DIR"/{ask,ask.ps1} 2>/dev/null || true
+
+echo ""
+echo "✅ Setup complete!"
+echo ""
+echo "To activate in current session:"
+echo "  source ~/.claude_aliases"
+echo ""
+echo "Available commands:"
+echo "  claude          - Claude with automatic logging"
+echo "  claude-orig     - Original Claude command"
+echo "  claude-logs     - List all log files"
+echo "  claude-today    - View today's log"
+echo "  claude-tail     - Follow today's log in real-time"
+echo ""
+echo "Logs location: ~/.claude_logs/"

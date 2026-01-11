@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+MODE="${1:---plan}" # --plan | --impl | --review
+shift || true  # Remove mode from arguments
+
+ROOT="$(git rev-parse --show-toplevel)"
+PROMPTS_DIR="$ROOT/prompts"
+
+case "$MODE" in
+  --plan)   SYS="$PROMPTS_DIR/PLANNER_AGENT.md" ;;
+  --impl)   SYS="$PROMPTS_DIR/IMPLEMENTER_MINIMAL_DIFF.md" ;;
+  --review) SYS="$PROMPTS_DIR/REVIEWER_STRICT.md" ;;
+  *) echo "Usage: scripts/ask [--plan|--impl|--review] [prompt]"; exit 1;;
+esac
+
+CHANGED=$(git diff --name-only --diff-filter=ACMRTUXB origin/main...HEAD 2>/dev/null | grep -E '^(src|tests)/' || true)
+if [ -z "$CHANGED" ]; then
+  CHANGED=$(git diff --name-only HEAD~1 | grep -E '^(src|tests)/' || true)
+fi
+
+# Default prompt if none provided
+PROMPT="${*:-Review the changes}"
+
+claude --print --add-dir src --add-dir tests --append-system-prompt "$(cat "$SYS")" "$PROMPT"

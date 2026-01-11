@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnp/
+.pnp.js
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Service account keys
+*-service-account.json
+service-account*.json
+firebase-adminsdk*.json
+
+# Build outputs
+build/
+dist/
+.next/
+out/
+
+# Flutter
+app/build/
+app/.dart_tool/
+app/.packages
+app/.pub-cache/
+app/.pub/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+firebase-debug.log
+
+# Testing
+coverage/
+
+# Firebase
+.firebase/
