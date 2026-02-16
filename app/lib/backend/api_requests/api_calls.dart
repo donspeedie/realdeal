@@ -559,20 +559,19 @@ class GETPptyCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GET Ppty',
-      apiUrl: 'https://zillow-com1.p.rapidapi.com/propertyExtendedSearch',
+      apiUrl: 'https://real-time-real-estate-data.p.rapidapi.com/search',
       callType: ApiCallType.GET,
       headers: {
         'X-Rapidapi-Key': 'deb506d049msh6c9af2ef7c77712p10ea19jsn780ae6896eba',
       },
       params: {
-        'propertyType': "SINGLE_FAMILY",
-        'status_Type': "FOR_SALE",
+        'home_type': "HOUSES",
+        'home_status': "FOR_SALE",
         'location': location,
         'page': page,
-        'minPrice': minPrice,
-        'maxPrice': maxPrice,
-        'daysOn': "1",
-        'lotSizeMin': 3000,
+        'min_price': minPrice,
+        'max_price': maxPrice,
+        'min_lot_size': 3000,
       },
       returnBody: true,
       encodeBodyUtf8: false,
@@ -775,17 +774,17 @@ class GETPptyTwoBdrmsInAreaCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GET Ppty TwoBdrmsInArea',
-      apiUrl: 'https://zillow-com1.p.rapidapi.com/propertyExtendedSearch',
+      apiUrl: 'https://real-time-real-estate-data.p.rapidapi.com/search',
       callType: ApiCallType.GET,
       headers: {
         'X-Rapidapi-Key': 'deb506d049msh6c9af2ef7c77712p10ea19jsn780ae6896eba',
       },
       params: {
-        'propertyType': "SINGLE_FAMILY",
-        'status_Type': "FOR_SALE",
+        'home_type': "HOUSES",
+        'home_status': "FOR_SALE",
         'location': location,
-        'bedsMin': 1,
-        'bedsMax': "5",
+        'min_bedrooms': 1,
+        'max_bedrooms': 5,
       },
       returnBody: true,
       encodeBodyUtf8: false,
@@ -831,7 +830,7 @@ class GETZestimateCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GET zestimate',
-      apiUrl: 'https://zillow-com1.p.rapidapi.com/zestimate',
+      apiUrl: 'https://real-time-real-estate-data.p.rapidapi.com/zestimate',
       callType: ApiCallType.GET,
       headers: {
         'X-Rapidapi-Key': 'deb506d049msh6c9af2ef7c77712p10ea19jsn780ae6896eba',
@@ -860,7 +859,7 @@ class GETPptyDetailsCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GET PptyDetails',
-      apiUrl: 'https://zillow-com1.p.rapidapi.com/property',
+      apiUrl: 'https://real-time-real-estate-data.p.rapidapi.com/property-details',
       callType: ApiCallType.GET,
       headers: {
         'X-Rapidapi-Key': 'deb506d049msh6c9af2ef7c77712p10ea19jsn780ae6896eba',
@@ -896,7 +895,7 @@ class GETCompsDetailCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GETCompsDetail',
-      apiUrl: 'https://zillow-com1.p.rapidapi.com/propertyComps',
+      apiUrl: 'https://real-time-real-estate-data.p.rapidapi.com/property-details',
       callType: ApiCallType.GET,
       headers: {
         'X-Rapidapi-Key': 'deb506d049msh6c9af2ef7c77712p10ea19jsn780ae6896eba',

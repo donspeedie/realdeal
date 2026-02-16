@@ -1,13 +1,67 @@
 const axios = require("axios");
 const {getCachedOrFetch} = require("./cacheUtils");
 
+const RAPIDAPI_HOST = "real-time-real-estate-data.p.rapidapi.com";
+
 const BASE_URLS = {
-  propertyExtendedSearch: "https://zillow-com1.p.rapidapi.com/propertyExtendedSearch",
-  zestimate: "https://zillow-com1.p.rapidapi.com/zestimate",
-  comps: "https://zillow-com1.p.rapidapi.com/propertyComps",
-  propertyDetails: "https://zillow-com1.p.rapidapi.com/property",
-  compsDetails: "https://zillow-com1.p.rapidapi.com/propertyComps",
+  propertyExtendedSearch: `https://${RAPIDAPI_HOST}/search`,
+  zestimate: `https://${RAPIDAPI_HOST}/zestimate`,
+  comps: `https://${RAPIDAPI_HOST}/property-details`,
+  propertyDetails: `https://${RAPIDAPI_HOST}/property-details`,
+  compsDetails: `https://${RAPIDAPI_HOST}/property-details`,
 };
+
+// Map old param names to new API param names per endpoint
+function adaptParams(endpoint, config) {
+  if (endpoint === "propertyExtendedSearch") {
+    const adapted = {...config};
+    // Map camelCase params to snake_case for new API
+    if (adapted.minPrice !== undefined) {
+      adapted.min_price = adapted.minPrice;
+      delete adapted.minPrice;
+    }
+    if (adapted.maxPrice !== undefined) {
+      adapted.max_price = adapted.maxPrice;
+      delete adapted.maxPrice;
+    }
+    if (adapted.propertyType !== undefined) {
+      // Map old property type values to new API values
+      const typeMap = {"SINGLE_FAMILY": "HOUSES", "TOWNHOUSE": "TOWNHOMES", "MULTI_FAMILY": "MULTI_FAMILY", "CONDO": "CONDOS_COOPS", "LOT": "LOTSLAND", "APARTMENT": "APARTMENTS", "MANUFACTURED": "MANUFACTURED"};
+      adapted.home_type = typeMap[adapted.propertyType] || adapted.propertyType;
+      delete adapted.propertyType;
+    }
+    if (adapted.status_Type !== undefined) {
+      adapted.home_status = adapted.status_Type;
+      delete adapted.status_Type;
+    }
+    if (adapted.lotSizeMin !== undefined) {
+      adapted.min_lot_size = adapted.lotSizeMin;
+      delete adapted.lotSizeMin;
+    }
+    return adapted;
+  }
+  return config;
+}
+
+// Normalize new API response to match old response shape
+function adaptResponse(endpoint, rawData) {
+  // New API wraps responses in {status: "OK", data: [...]}
+  const data = (rawData && rawData.status === "OK" && rawData.data !== undefined)
+    ? rawData.data
+    : rawData;
+
+  // Search endpoint: new API returns flat array, old returned {props: [], totalResultCount}
+  if (endpoint === "propertyExtendedSearch" && Array.isArray(data)) {
+    return { props: data, totalResultCount: data.length };
+  }
+
+  if (endpoint === "zestimate" && data) {
+    if (data.zestimate !== undefined && data.value === undefined) {
+      return { ...data, value: data.zestimate };
+    }
+  }
+  return data;
+}
 
 async function fetchZillowDataWithCache(endpoint, config, maxRetries = 3) {
   // Standardizes a configuration object for cache key generation
@@ -44,18 +98,18 @@ async function fetchZillowDataWithCache(endpoint, config, maxRetries = 3) {
     let retries = 0;
     while (retries <= maxRetries) {
       try {
+        const adaptedParams = adaptParams(endpoint, config);
         const response = await axios.get(BASE_URLS[endpoint], {
-          params: config,
+          params: adaptedParams,
           headers: {
             "X-Rapidapi-Key": process.env.RAPID_API_KEY,
-            "X-Rapidapi-Host": "zillow-com1.p.rapidapi.com",
+            "X-Rapidapi-Host": RAPIDAPI_HOST,
           },
           timeout: 15000,
         });
         return {
           status: response.status,
-          data: response.data,
-        // headers: response.headers, // <-- remove or sanitize if needed
+          data: adaptResponse(endpoint, response.data),
         };
       } catch (err) {
         console.log(err.response);

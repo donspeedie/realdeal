@@ -1,8 +1,11 @@
 const axios = require("axios");
 const {getCachedOrFetch} = require("./cacheUtils");
 
+const RAPIDAPI_HOST = "redfin-base.p.rapidapi.com";
+
 const BASE_URLS = {
-  propertySearch: "https://redfin-com-data.p.rapidapi.com/property/search",
+  searchSold: `https://${RAPIDAPI_HOST}/redfin/search/location/for-sold`,
+  searchForSale: `https://${RAPIDAPI_HOST}/redfin/search/location/for-sale`,
 };
 
 async function fetchRedfinDataWithCache(endpoint, config, maxRetries = 3) {
@@ -23,10 +26,14 @@ async function fetchRedfinDataWithCache(endpoint, config, maxRetries = 3) {
 
     while (retries <= maxRetries) {
       try {
+        // Strip search_type param — now encoded in the endpoint URL
+        const params = {...config};
+        delete params.search_type;
         const response = await axios.get(BASE_URLS[endpoint], {
-          params: config,
+          params: params,
           headers: {
             "X-Rapidapi-Key": process.env.RAPID_API_KEY,
+            "X-Rapidapi-Host": RAPIDAPI_HOST,
           },
           timeout: 15000,
         });

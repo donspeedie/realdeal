@@ -1,12 +1,14 @@
 import axios from 'axios';
 import { getCachedOrFetch } from '../cache';
 
+const RAPIDAPI_HOST = "real-time-real-estate-data.p.rapidapi.com";
+
 const BASE_URLS = {
-  propertyExtendedSearch: "https://zillow-com1.p.rapidapi.com/propertyExtendedSearch",
-  zestimate: "https://zillow-com1.p.rapidapi.com/zestimate",
-  comps: "https://zillow-com1.p.rapidapi.com/propertyComps",
-  propertyDetails: "https://zillow-com1.p.rapidapi.com/property",
-  compsDetails: "https://zillow-com1.p.rapidapi.com/propertyComps",
+  propertyExtendedSearch: `https://${RAPIDAPI_HOST}/search`,
+  zestimate: `https://${RAPIDAPI_HOST}/zestimate`,
+  comps: `https://${RAPIDAPI_HOST}/property-details`,
+  propertyDetails: `https://${RAPIDAPI_HOST}/property-details`,
+  compsDetails: `https://${RAPIDAPI_HOST}/property-details`,
 } as const;
 
 type ZillowEndpoint = keyof typeof BASE_URLS;
@@ -69,13 +71,22 @@ export async function fetchZillowDataWithCache(
           params: config,
           headers: {
             "X-Rapidapi-Key": process.env.RAPID_API_KEY,
-            "X-Rapidapi-Host": "zillow-com1.p.rapidapi.com",
+            "X-Rapidapi-Host": RAPIDAPI_HOST,
           },
           timeout: 15000,
         });
+        // New API wraps responses in {status: "OK", data: [...]}
+        const rawData = response.data;
+        let unwrapped = (rawData && rawData.status === "OK" && rawData.data !== undefined)
+          ? rawData.data
+          : rawData;
+        // Search endpoint: new API returns flat array, old returned {props: [], totalResultCount}
+        if (endpoint === "propertyExtendedSearch" && Array.isArray(unwrapped)) {
+          unwrapped = { props: unwrapped, totalResultCount: unwrapped.length };
+        }
         return {
           status: response.status,
-          data: response.data,
+          data: unwrapped,
         };
       } catch (err: any) {
         console.log(err.response);
