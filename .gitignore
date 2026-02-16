@@ -47,3 +47,11 @@ coverage/
 # Firebase
 .firebase/
 .vercel
+
+# Claude Code temp files
+tmpclaude-*
+
+# Flutter generated
+app/.flutter-plugins-dependencies
+app/.flutter-tool-state
+app/ios/Flutter/ephemeral/
