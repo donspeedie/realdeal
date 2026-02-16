@@ -1,13 +1,21 @@
 require("dotenv").config();
 
 const {onRequest} = require("firebase-functions/v2/https");
-const {onDocumentUpdated} = require("firebase-functions/v2/firestore");
+const {onDocumentUpdated, onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {setGlobalOptions} = require("firebase-functions/v2/options");
+const {defineSecret} = require("firebase-functions/params");
 const admin = require("firebase-admin");
+
+// Secrets managed via Firebase Secret Manager (not functions.config)
+// Set with: firebase functions:secrets:set RAPID_API_KEY
+const rapidApiKey = defineSecret("RAPID_API_KEY");
+const hubspotApiKey = defineSecret("HUBSPOT_API_KEY");
+const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
 const {initSSE} = require("./sseWriter");
 const {fetchZillowDataWithCache} = require("./zillowApi");
 const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
+const {scoreDeal, mapStrategyResultToDeal} = require("./dealScoringEngine");
 
 if (admin.apps.length === 0) admin.initializeApp();
 
@@ -17,6 +25,7 @@ exports.autoRecalculateSavedPropertyV2 = onDocumentUpdated({
   memory: "512MiB",
   timeoutSeconds: 540,
   concurrency: 10,
+  secrets: [rapidApiKey],
 }, async (event) => {
   const before = event.data.before.data();
   const after = event.data.after.data();
@@ -135,7 +144,15 @@ async function processBatch(batch, params, writeEvent, batchStartCount, totalPro
     for (let j = 0; j < results.length; j++) {
       try {
         const safeResult = ensureFlutterFlowCompatibility(results[j]);
-        console.log(`📡 BATCH RESULT: ${safeResult.zpid} - ${safeResult.method} ($${safeResult.netReturn}) [ID: ${safeResult.calculationId}]`);
+        // Add deal score
+        try {
+          const dealInput = mapStrategyResultToDeal(batch[i]?.property || {}, safeResult);
+          const dealScore = scoreDeal(dealInput);
+          safeResult.score = dealScore.totalScore;
+          safeResult.recommendation = dealScore.recommendation;
+          safeResult.pattern = dealScore.pattern;
+        } catch (scoreErr) { /* scoring is best-effort */ }
+        console.log(`📡 BATCH RESULT: ${safeResult.zpid} - ${safeResult.method} ($${safeResult.netReturn}) Score:${safeResult.score || "N/A"} [ID: ${safeResult.calculationId}]`);
         writeEvent("data", safeResult);
         resultsSent++;
       } catch (error) {
@@ -171,7 +188,7 @@ setGlobalOptions({
 });
 
 // Non-streaming endpoint for FlutterFlow compatibility
-exports.cloudCalcsSync = onRequest(async (req, res) => {
+exports.cloudCalcsSync = onRequest({secrets: [rapidApiKey]}, async (req, res) => {
   res.set({
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -183,6 +200,13 @@ exports.cloudCalcsSync = onRequest(async (req, res) => {
   }
 
   const params = req.body || {};
+
+  // Map Flutter field names to strategyCalculator param names
+  if (params.financingRate && !params.interestRate) params.interestRate = params.financingRate;
+  if (params.fixnflipDuration && !params.fixFlipDuration) params.fixFlipDuration = params.fixnflipDuration;
+  if (params.newDuration && !params.newBuildDuration) params.newBuildDuration = params.newDuration;
+  if (params.vacanyRate && !params.vacancyRate) params.vacancyRate = params.vacanyRate;
+
   if (!params.location) {
     return res.status(400).json({error: "Missing required 'location' parameter"});
   }
@@ -204,7 +228,18 @@ exports.cloudCalcsSync = onRequest(async (req, res) => {
     for (const prop of props) {
       try {
         const propResults = await processProperty(prop, params, 1, props.length);
-        results.push(...propResults.filter(r => r)); // Filter out nulls
+        for (const r of propResults.filter((r) => r)) {
+          try {
+            const dealInput = mapStrategyResultToDeal(prop, r);
+            const dealScore = scoreDeal(dealInput);
+            r.score = dealScore.totalScore;
+            r.recommendation = dealScore.recommendation;
+            r.pattern = dealScore.pattern;
+          } catch (scoreErr) {
+            console.warn(`Scoring failed for ${prop.zpid}: ${scoreErr.message}`);
+          }
+          results.push(r);
+        }
       } catch (error) {
         console.error(`Error processing ${prop.zpid}:`, error);
       }
@@ -246,7 +281,7 @@ exports.testSimple = onRequest(async (req, res) => {
   });
 });
 
-exports.cloudCalcs = onRequest(async (req, res) => {
+exports.cloudCalcs = onRequest({secrets: [rapidApiKey]}, async (req, res) => {
   const requestId = Math.random().toString(36).substr(2, 9);
   console.log(`\n🚀 REQUEST ${requestId} STARTED`);
   console.log(`📋 Method: ${req.method}`);
@@ -268,6 +303,12 @@ exports.cloudCalcs = onRequest(async (req, res) => {
 
   const {writeEvent, end, keepAlive} = initSSE(res);
   const params = req.body || {};
+
+  // Map Flutter field names to strategyCalculator param names
+  if (params.financingRate && !params.interestRate) params.interestRate = params.financingRate;
+  if (params.fixnflipDuration && !params.fixFlipDuration) params.fixFlipDuration = params.fixnflipDuration;
+  if (params.newDuration && !params.newBuildDuration) params.newBuildDuration = params.newDuration;
+  if (params.vacanyRate && !params.vacancyRate) params.vacancyRate = params.vacanyRate;
 
   console.log(`🏠 Location parameter: ${params.location || 'NOT PROVIDED'}`);
   console.log(`⚙️ All parameters:`, JSON.stringify(params, null, 2));
@@ -410,7 +451,7 @@ exports.cloudCalcs = onRequest(async (req, res) => {
 });
 
 // HubSpot Integration Endpoints
-exports.hubspotTrackCalculation = onRequest(async (req, res) => {
+exports.hubspotTrackCalculation = onRequest({secrets: [hubspotApiKey]}, async (req, res) => {
   res.set({
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -461,7 +502,7 @@ exports.hubspotTrackCalculation = onRequest(async (req, res) => {
   }
 });
 
-exports.hubspotCreateContact = onRequest(async (req, res) => {
+exports.hubspotCreateContact = onRequest({secrets: [hubspotApiKey]}, async (req, res) => {
   res.set({
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -503,7 +544,7 @@ exports.hubspotCreateContact = onRequest(async (req, res) => {
   }
 });
 
-exports.hubspotFindContact = onRequest(async (req, res) => {
+exports.hubspotFindContact = onRequest({secrets: [hubspotApiKey]}, async (req, res) => {
   res.set({
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
@@ -1031,3 +1072,444 @@ async function send30DayEmail(userId, email, engagement, db) {
     },
   });
 }
+
+// ============================================================
+// DEAL SCANNER - Automated daily property scanning
+// ============================================================
+
+/**
+ * Load user profile from Firestore and map field names to what strategyCalculator expects.
+ * The Flutter app stores fields like "financingRate" and "fixnflipDuration",
+ * but strategyCalculator.js reads "interestRate" and "fixFlipDuration".
+ */
+async function loadUserCalcParams(db, email) {
+  const userSnap = await db.collection("UserData")
+    .where("email", "==", email).limit(1).get();
+
+  if (userSnap.empty) {
+    console.log(`[DealScanner] No user profile found for ${email}, using defaults`);
+    return {};
+  }
+
+  const u = userSnap.docs[0].data();
+  console.log(`[DealScanner] Loaded profile for ${email} (${u.display_name || "unknown"})`);
+
+  // Map user profile field names → strategyCalculator param names
+  const params = {};
+  if (u.financingRate) params.interestRate = u.financingRate;
+  if (u.salRate) params.salRate = u.salRate;
+  if (u.loanFeesRate) params.loanFeesRate = u.loanFeesRate;
+  if (u.permitsFees) params.permitsFees = u.permitsFees;
+  if (u.fixnflipDuration) params.fixFlipDuration = u.fixnflipDuration;
+  if (u.addOnDuration) params.addOnDuration = u.addOnDuration;
+  if (u.aduDuration) params.aduDuration = u.aduDuration;
+  if (u.newDuration) params.newBuildDuration = u.newDuration;
+  if (u.oneBdrmMarketValue) params.oneBdrmMarketValue = u.oneBdrmMarketValue;
+  if (u.aduImpRate) params.aduImpRate = u.aduImpRate;
+  if (u.maintenanceRate) params.maintenanceRate = u.maintenanceRate;
+  if (u.operatingExpenseRate) params.operatingExpenseRate = u.operatingExpenseRate;
+  if (u.propertyManagementFeeRate) params.propertyManagementFeeRate = u.propertyManagementFeeRate;
+  if (u.utilities) params.utilities = u.utilities;
+  if (u.vacanyRate) params.vacancyRate = u.vacanyRate;
+  if (u.minimumReturn) params.minReturn = u.minimumReturn;
+
+  return params;
+}
+
+/**
+ * Scheduled Deal Scanner - runs daily at 6:00 AM PST
+ * Reads scanConfigs from Firestore, searches each market,
+ * runs proforma via processProperty, and emails qualifying deals.
+ */
+exports.scanDealsDaily = onSchedule({
+  schedule: "0 6 * * *",
+  timeZone: "America/Los_Angeles",
+  region: "us-west1",
+  memory: "2GiB",
+  timeoutSeconds: 540,
+  secrets: [rapidApiKey],
+}, async (event) => {
+  console.log("[DealScanner] Starting daily scan...");
+  const db = admin.firestore();
+
+  // 1. Load active scan configs
+  const configsSnap = await db.collection("scanConfigs")
+    .where("active", "==", true).get();
+
+  if (configsSnap.empty) {
+    console.log("[DealScanner] No active scan configs. Exiting.");
+    return;
+  }
+
+  // 2. Load existing alerts to deduplicate (by zpid+method)
+  const existingSnap = await db.collection("dealAlerts")
+    .where("scannedAt", ">=", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+    .get();
+  const existingKeys = new Set();
+  existingSnap.docs.forEach((d) => {
+    const data = d.data();
+    existingKeys.add(`${data.zpid}_${data.method}`);
+  });
+
+  const allDeals = [];
+  const notifyEmails = new Set();
+
+  // 2b. Collect all notify emails first, then load user profile
+  for (const doc of configsSnap.docs) {
+    const cfg = doc.data();
+    if (cfg.notifyEmail) notifyEmails.add(cfg.notifyEmail);
+  }
+
+  // 2c. Load user calc params from the first notify email's profile
+  const primaryEmail = [...notifyEmails][0];
+  const userCalcParams = primaryEmail ? await loadUserCalcParams(db, primaryEmail) : {};
+
+  // 3. Scan each market
+  for (const doc of configsSnap.docs) {
+    const cfg = doc.data();
+    const label = cfg.name || cfg.location;
+    console.log(`[DealScanner] Scanning: ${label}`);
+
+    try {
+      const maxPages = cfg.maxPages || 5;
+      let totalPropsScanned = 0;
+
+      for (let page = 1; page <= maxPages; page++) {
+        const response = await fetchZillowDataWithCache("propertyExtendedSearch", {
+          location: cfg.location,
+          page,
+          status_Type: cfg.status_Type || "FOR_SALE",
+          propertyType: cfg.propertyType || "SINGLE_FAMILY",
+          minPrice: cfg.minPrice,
+          maxPrice: cfg.maxPrice,
+        });
+
+        const props = response?.data?.props || [];
+        console.log(`[DealScanner] ${label} page ${page}: ${props.length} properties`);
+
+        if (props.length === 0) break; // No more results
+
+        totalPropsScanned += props.length;
+
+        for (let i = 0; i < props.length; i++) {
+          try {
+            const results = await processProperty(props[i], {
+              ...userCalcParams,
+              minReturn: cfg.minReturn || userCalcParams.minReturn || 25000,
+            }, totalPropsScanned - props.length + i + 1, totalPropsScanned);
+
+            for (const r of results) {
+              if (!r) continue;
+              const key = `${r.zpid}_${r.method}`;
+              if (existingKeys.has(key)) continue; // Skip duplicates
+
+              const meetsReturn = r.netReturn >= (cfg.minReturn || 25000);
+              const meetsROI = r.netROI >= (cfg.minROI || 0.15);
+              const meetsCash = !cfg.maxCashNeeded || r.cashNeeded <= cfg.maxCashNeeded;
+
+              if (meetsReturn && meetsROI && meetsCash) {
+                existingKeys.add(key);
+
+                // Score the deal using OA scoring engine
+                let dealScore = null;
+                try {
+                  const dealInput = mapStrategyResultToDeal(props[i], r);
+                  dealScore = scoreDeal(dealInput);
+                } catch (scoreErr) {
+                  console.warn(`[DealScanner] Scoring failed for ${r.zpid}: ${scoreErr.message}`);
+                }
+
+                allDeals.push({
+                  ...r,
+                  scanConfig: label,
+                  score: dealScore ? dealScore.totalScore : null,
+                  recommendation: dealScore ? dealScore.recommendation : null,
+                  pattern: dealScore ? dealScore.pattern : null,
+                  projectedProfit: dealScore ? dealScore.projectedProfit : null,
+                });
+              }
+            }
+          } catch (err) {
+            console.warn(`[DealScanner] Error on zpid ${props[i]?.zpid}: ${err.message}`);
+          }
+        }
+
+        if (props.length < 35) break; // Partial page = last page
+      }
+
+      console.log(`[DealScanner] ${label}: ${totalPropsScanned} total properties scanned`);
+    } catch (err) {
+      console.error(`[DealScanner] Error scanning ${label}: ${err.message}`);
+    }
+  }
+
+  // 4. Store qualifying deals
+  for (const deal of allDeals) {
+    await db.collection("dealAlerts").add({
+      ...deal,
+      scannedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  }
+
+  // 5. Send digest email
+  if (allDeals.length > 0 && notifyEmails.size > 0) {
+    // Sort deals by score (highest first), then by netReturn
+    allDeals.sort((a, b) => (b.score || 0) - (a.score || 0) || (b.netReturn || 0) - (a.netReturn || 0));
+
+    const rows = allDeals.map((d) => {
+      const listingUrl = d.detailUrl || "#";
+      const scoreColor = d.score >= 70 ? "#16a34a" : d.score >= 50 ? "#ca8a04" : "#dc2626";
+      const scoreLabel = d.recommendation || "N/A";
+      return `<tr>
+        <td style="padding:10px 12px;">
+          <a href="${listingUrl}" style="color:#2563eb;text-decoration:none;font-weight:600;">${d.address || "N/A"}</a>
+        </td>
+        <td style="padding:10px 8px;">${d.method}</td>
+        <td style="padding:10px 8px;">$${(d.price || 0).toLocaleString()}</td>
+        <td style="padding:10px 8px;color:#16a34a;font-weight:600;">$${(d.netReturn || 0).toLocaleString()}</td>
+        <td style="padding:10px 8px;">${((d.netROI || 0) * 100).toFixed(1)}%</td>
+        <td style="padding:10px 8px;">$${(d.cashNeeded || 0).toLocaleString()}</td>
+        <td style="padding:10px 8px;"><span style="color:${scoreColor};font-weight:700;">${d.score || "—"}</span> <span style="font-size:11px;color:#94a3b8;">${scoreLabel}</span></td>
+        <td style="padding:10px 8px;">${d.scanConfig}</td>
+      </tr>`;
+    }).join("");
+
+    const dateStr = new Date().toLocaleDateString("en-US", {weekday: "long", year: "numeric", month: "long", day: "numeric"});
+
+    const html = `
+      <div style="max-width:700px;margin:0 auto;font-family:'Helvetica Neue',Arial,sans-serif;color:#1e293b;">
+        <!-- Header -->
+        <div style="background:linear-gradient(135deg,#1e40af 0%,#3b82f6 100%);padding:24px 28px;border-radius:12px 12px 0 0;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td>
+              <span style="font-size:28px;line-height:1;">&#x26A1;</span>
+              <span style="font-size:22px;font-weight:700;color:white;vertical-align:middle;margin-left:8px;">BuyBox Match</span>
+            </td>
+            <td align="right">
+              <!-- 3D Box Icon (axonometric cube) -->
+              <svg width="40" height="40" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <polygon points="50,10 90,30 90,70 50,90 10,70 10,30" fill="none" stroke="white" stroke-width="3"/>
+                <line x1="50" y1="10" x2="50" y2="90" stroke="white" stroke-width="2" opacity="0.5"/>
+                <line x1="10" y1="30" x2="90" y2="30" stroke="white" stroke-width="2" opacity="0.5"/>
+                <polygon points="50,10 90,30 50,50 10,30" fill="rgba(255,255,255,0.15)" stroke="white" stroke-width="2"/>
+                <polygon points="50,50 90,30 90,70 50,90" fill="rgba(255,255,255,0.08)" stroke="white" stroke-width="2"/>
+                <polygon points="50,50 10,30 10,70 50,90" fill="rgba(255,255,255,0.04)" stroke="white" stroke-width="2"/>
+              </svg>
+            </td>
+          </tr></table>
+          <p style="color:rgba(255,255,255,0.85);font-size:14px;margin:8px 0 0 0;">${dateStr}</p>
+        </div>
+
+        <!-- Summary -->
+        <div style="background:#f8fafc;padding:16px 28px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
+          <p style="margin:0;font-size:15px;">
+            <strong style="font-size:24px;color:#2563eb;">${allDeals.length}</strong>
+            <span style="color:#64748b;"> qualifying deal${allDeals.length > 1 ? "s" : ""} across ${configsSnap.size} market${configsSnap.size > 1 ? "s" : ""}</span>
+          </p>
+        </div>
+
+        <!-- Deal Table -->
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;font-size:13px;border-left:1px solid #e2e8f0;border-right:1px solid #e2e8f0;">
+          <tr style="background:#1e293b;color:white;">
+            <th style="padding:10px 12px;text-align:left;">Address</th>
+            <th style="padding:10px 8px;text-align:left;">Strategy</th>
+            <th style="padding:10px 8px;text-align:left;">Price</th>
+            <th style="padding:10px 8px;text-align:left;">Net Return</th>
+            <th style="padding:10px 8px;text-align:left;">ROI</th>
+            <th style="padding:10px 8px;text-align:left;">Cash Needed</th>
+            <th style="padding:10px 8px;text-align:left;">Score</th>
+            <th style="padding:10px 8px;text-align:left;">Market</th>
+          </tr>
+          ${rows}
+        </table>
+
+        <!-- Footer -->
+        <div style="background:#f8fafc;padding:20px 28px;border:1px solid #e2e8f0;border-radius:0 0 12px 12px;">
+          <table cellpadding="0" cellspacing="0" border="0" width="100%"><tr>
+            <td>
+              <p style="margin:0 0 8px 0;font-size:12px;color:#94a3b8;">Min Return $25K+ &middot; Min ROI 15%+ &middot; Deduped 7 days</p>
+            </td>
+            <td align="right">
+              <a href="https://app.getrealdeal.ai" style="display:inline-block;background:#2563eb;color:white;padding:8px 20px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:600;">
+                &#x26A1; Open in getRealDeal.ai
+              </a>
+            </td>
+          </tr></table>
+        </div>
+      </div>
+    `;
+
+    for (const email of notifyEmails) {
+      await db.collection("mail").add({
+        to: email,
+        message: {
+          subject: `\u26A1 BuyBox Match: ${allDeals.length} Deal${allDeals.length > 1 ? "s" : ""} Found - ${new Date().toLocaleDateString()}`,
+          html,
+        },
+      });
+    }
+    console.log(`[DealScanner] Digest sent to ${notifyEmails.size} recipient(s).`);
+  }
+
+  console.log(`[DealScanner] Complete. ${allDeals.length} qualifying deals from ${configsSnap.size} markets.`);
+});
+
+/**
+ * Manual trigger for deal scanner (for testing)
+ */
+exports.triggerDealScan = onCall({
+  region: "us-west1",
+  memory: "2GiB",
+  timeoutSeconds: 540,
+  secrets: [rapidApiKey],
+}, async (request) => {
+  if (!request.auth) {
+    throw new Error("Authentication required");
+  }
+
+  const db = admin.firestore();
+  const configsSnap = await db.collection("scanConfigs")
+    .where("active", "==", true).get();
+
+  if (configsSnap.empty) {
+    return {success: false, message: "No active scan configs"};
+  }
+
+  // Reuse the same logic - trigger the scheduled function's handler
+  console.log("[DealScanner] Manual trigger by", request.auth.uid);
+
+  // Load the triggering user's calc params from their profile
+  const userDoc = await db.collection("UserData").doc(request.auth.uid).get();
+  let userCalcParams = {};
+  if (userDoc.exists) {
+    const u = userDoc.data();
+    console.log(`[DealScanner] Loaded profile for ${u.email}`);
+    userCalcParams = await loadUserCalcParams(db, u.email);
+  }
+
+  // Inline a lightweight version for testing (with pagination)
+  const allDeals = [];
+  for (const doc of configsSnap.docs) {
+    const cfg = doc.data();
+    const maxPages = cfg.maxPages || 5;
+    try {
+      for (let page = 1; page <= maxPages; page++) {
+        const response = await fetchZillowDataWithCache("propertyExtendedSearch", {
+          location: cfg.location,
+          page,
+          status_Type: cfg.status_Type || "FOR_SALE",
+          propertyType: cfg.propertyType || "SINGLE_FAMILY",
+          minPrice: cfg.minPrice,
+          maxPrice: cfg.maxPrice,
+        });
+
+        const props = response?.data?.props || [];
+        console.log(`[DealScanner] ${cfg.location} page ${page}: ${props.length} properties`);
+
+        if (props.length === 0) break;
+
+        for (const prop of props) {
+          try {
+            const results = await processProperty(prop, {
+              ...userCalcParams,
+              minReturn: cfg.minReturn || userCalcParams.minReturn || 25000,
+            }, 1, props.length);
+            allDeals.push(...results.filter((r) => r && r.netROI >= (cfg.minROI || 0.15)));
+          } catch (err) {
+            // Skip individual property errors
+          }
+        }
+
+        if (props.length < 35) break; // Partial page = last page
+      }
+    } catch (err) {
+      console.error(`[DealScanner] Error scanning ${cfg.location}: ${err.message}`);
+    }
+  }
+
+  return {
+    success: true,
+    dealsFound: allDeals.length,
+    results: allDeals,
+  };
+});
+
+// ============================================================
+// EMAIL QUEUE PROCESSOR - SendGrid
+// ============================================================
+
+/**
+ * Process emails queued in the 'mail' Firestore collection.
+ * Replaces the firestore-send-email Firebase extension.
+ *
+ * Supports two formats:
+ *   Direct:   { to, message: { subject, html, text } }
+ *   Template: { to, template: { name, data } }
+ */
+exports.processMailQueue = onDocumentCreated({
+  document: "mail/{docId}",
+  region: "us-west1",
+  secrets: [sendgridApiKey],
+}, async (event) => {
+  const sgMail = require("@sendgrid/mail");
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+  const snap = event.data;
+  if (!snap) return;
+
+  const mailData = snap.data();
+  const docRef = snap.ref;
+
+  const to = mailData.to;
+  if (!to) {
+    await docRef.update({delivery: {state: "ERROR", error: "Missing 'to' field"}});
+    return;
+  }
+
+  const from = mailData.from || "donspeedie@gmail.com";
+
+  try {
+    const msg = {to, from};
+
+    if (mailData.cc) msg.cc = mailData.cc;
+    if (mailData.bcc) msg.bcc = mailData.bcc;
+    if (mailData.replyTo) msg.replyTo = mailData.replyTo;
+
+    if (mailData.message) {
+      // Direct email: { subject, html, text }
+      msg.subject = mailData.message.subject || "(No subject)";
+      if (mailData.message.html) msg.html = mailData.message.html;
+      if (mailData.message.text) msg.text = mailData.message.text;
+      if (!msg.html && !msg.text) msg.text = "(Empty email)";
+    } else if (mailData.template) {
+      // Template email: { name, data }
+      msg.templateId = mailData.template.name;
+      msg.dynamicTemplateData = mailData.template.data || {};
+    } else {
+      await docRef.update({delivery: {state: "ERROR", error: "Missing 'message' or 'template'"}});
+      return;
+    }
+
+    await sgMail.send(msg);
+    console.log(`[Mail] Sent to ${to} via SendGrid`);
+
+    await docRef.update({
+      delivery: {
+        state: "SUCCESS",
+        attempts: 1,
+        endTime: admin.firestore.FieldValue.serverTimestamp(),
+      },
+    });
+  } catch (error) {
+    console.error(`[Mail] Failed to send to ${to}:`, error.message);
+
+    await docRef.update({
+      delivery: {
+        state: "ERROR",
+        attempts: 1,
+        error: error.message,
+        endTime: admin.firestore.FieldValue.serverTimestamp(),
+      },
+    });
+  }
+});

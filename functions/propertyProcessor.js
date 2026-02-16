@@ -74,8 +74,8 @@ async function processProperty(prop, params, sequence, total) {
   const zpid = prop.zpid;
 
   // Log API call parameters
-  const soldParams = { location: pincode, search_type: "Sold" };
-  const forSaleParams = { location: pincode, search_type: "ForSale" };
+  const soldParams = { location: pincode };
+  const forSaleParams = { location: pincode };
 
   console.log("📡 API call parameters:", {
     soldParams: soldParams,
@@ -110,11 +110,11 @@ async function processProperty(prop, params, sequence, total) {
         console.log("❌ Zillow property details error:", err.message);
         return { data: {} };
       }),
-      fetchRedfinDataWithCache("propertySearch", soldParams).catch((err) => {
+      fetchRedfinDataWithCache("searchSold", soldParams).catch((err) => {
         console.log("❌ Redfin sold search error:", err.message);
         return { data: {} };
       }),
-      fetchRedfinDataWithCache("propertySearch", forSaleParams).catch((err) => {
+      fetchRedfinDataWithCache("searchForSale", forSaleParams).catch((err) => {
         console.log("❌ Redfin for-sale search error:", err.message);
         return { data: {} };
       }),

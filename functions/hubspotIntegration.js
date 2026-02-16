@@ -4,11 +4,9 @@ const hubspot = require('@hubspot/api-client');
  * Initialize HubSpot client with API key from environment
  */
 function getHubSpotClient() {
-  // Try process.env first (from .env file), then fall back to Firebase config
-  const apiKey = process.env.HUBSPOT_API_KEY ||
-                 (typeof require !== 'undefined' && require('firebase-functions').config?.()?.hubspot?.api_key);
+  const apiKey = process.env.HUBSPOT_API_KEY;
   if (!apiKey) {
-    throw new Error('HUBSPOT_API_KEY not found in environment variables or Firebase config');
+    throw new Error('HUBSPOT_API_KEY not set. Run: firebase functions:secrets:set HUBSPOT_API_KEY');
   }
   console.log('🔑 HubSpot API key found, length:', apiKey.length);
   return new hubspot.Client({ accessToken: apiKey });
