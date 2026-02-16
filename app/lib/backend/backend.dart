@@ -7,6 +7,7 @@ import 'schema/util/firestore_util.dart';
 
 import 'schema/user_data_record.dart';
 import 'schema/saved_properties_record.dart';
+import 'schema/deal_alerts_record.dart';
 
 export 'dart:async' show StreamSubscription;
 export 'package:cloud_firestore/cloud_firestore.dart' hide Order;
@@ -17,6 +18,7 @@ export 'schema/util/schema_util.dart';
 
 export 'schema/user_data_record.dart';
 export 'schema/saved_properties_record.dart';
+export 'schema/deal_alerts_record.dart';
 
 /// Functions to query UserDataRecords (as a Stream and as a Future).
 Future<int> queryUserDataRecordCount({
@@ -87,6 +89,43 @@ Future<List<SavedPropertiesRecord>> querySavedPropertiesRecordOnce({
     queryCollectionOnce(
       SavedPropertiesRecord.collection,
       SavedPropertiesRecord.fromSnapshot,
+      queryBuilder: queryBuilder,
+      limit: limit,
+      singleRecord: singleRecord,
+    );
+
+/// Functions to query DealAlertsRecords (as a Stream and as a Future).
+Future<int> queryDealAlertsRecordCount({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+}) =>
+    queryCollectionCount(
+      DealAlertsRecord.collection,
+      queryBuilder: queryBuilder,
+      limit: limit,
+    );
+
+Stream<List<DealAlertsRecord>> queryDealAlertsRecord({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+  bool singleRecord = false,
+}) =>
+    queryCollection(
+      DealAlertsRecord.collection,
+      DealAlertsRecord.fromSnapshot,
+      queryBuilder: queryBuilder,
+      limit: limit,
+      singleRecord: singleRecord,
+    );
+
+Future<List<DealAlertsRecord>> queryDealAlertsRecordOnce({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+  bool singleRecord = false,
+}) =>
+    queryCollectionOnce(
+      DealAlertsRecord.collection,
+      DealAlertsRecord.fromSnapshot,
       queryBuilder: queryBuilder,
       limit: limit,
       singleRecord: singleRecord,

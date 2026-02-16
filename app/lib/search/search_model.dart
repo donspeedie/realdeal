@@ -100,6 +100,15 @@ class SearchModel extends FlutterFlowModel<SearchWidget> {
   /// This value is used to show saved property detail component
   SavedPropertiesRecord? selectedFieldSavedProperty;
 
+  /// This value is used to show deal alert detail component
+  DealAlertsRecord? selectedDealAlert;
+
+  /// Deal alerts infinite scroll state
+  List<DealAlertsRecord> loadedDealAlerts = [];
+  bool hasMoreAlerts = true;
+  bool isLoadingAlerts = false;
+  DocumentSnapshot? lastAlertDocument;
+
   /// This stores map coordinates so that the small maps can show the proper
   /// location
   LatLng? mapCoordinates;

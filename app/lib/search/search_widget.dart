@@ -7507,9 +7507,9 @@ class _SearchWidgetState extends State<SearchWidget>
                                                               ),
                                                             ),
                                                             builder: (context,
-                                                                snapshot) {
+                                                                savedSnapshot) {
                                                               // Customize what your widget looks like when it's loading.
-                                                              if (!snapshot
+                                                              if (!savedSnapshot
                                                                   .hasData) {
                                                                 return Center(
                                                                   child:
@@ -7529,12 +7529,67 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                   ),
                                                                 );
                                                               }
-                                                              List<SavedPropertiesRecord>
-                                                                  listViewSavedPropertiesRecordList =
-                                                                  snapshot
-                                                                      .data!;
+                                                              // Load initial deal alerts if not yet loaded (admin only)
+                                                              if (currentUserEmail == 'despeedie@nimbledev.llc' &&
+                                                                  _model.loadedDealAlerts.isEmpty &&
+                                                                  !_model.isLoadingAlerts &&
+                                                                  _model.hasMoreAlerts) {
+                                                                _model.isLoadingAlerts = true;
+                                                                DealAlertsRecord.collection
+                                                                    .orderBy('scannedAt', descending: true)
+                                                                    .limit(20)
+                                                                    .get()
+                                                                    .then((snap) {
+                                                                  final docs = snap.docs
+                                                                      .map((d) => DealAlertsRecord.fromSnapshot(d))
+                                                                      .toList();
+                                                                  _model.loadedDealAlerts = docs;
+                                                                  _model.lastAlertDocument = snap.docs.isNotEmpty ? snap.docs.last : null;
+                                                                  _model.hasMoreAlerts = snap.docs.length >= 20;
+                                                                  _model.isLoadingAlerts = false;
+                                                                  safeSetState(() {});
+                                                                });
+                                                              }
 
-                                                              return ListView
+                                                              final savedList = savedSnapshot.data!;
+
+                                                              // Deduplicate: remove alerts already saved by zpid
+                                                              final savedZpids = savedList.map((s) => s.id).toSet();
+                                                              final uniqueAlerts = _model.loadedDealAlerts
+                                                                  .where((a) => !savedZpids.contains(a.zpid))
+                                                                  .toList();
+
+                                                              final totalCount = savedList.length + uniqueAlerts.length +
+                                                                  (_model.hasMoreAlerts && uniqueAlerts.isNotEmpty ? 1 : 0);
+
+                                                              return NotificationListener<ScrollNotification>(
+                                                                onNotification: (scrollInfo) {
+                                                                  if (scrollInfo.metrics.pixels >=
+                                                                          scrollInfo.metrics.maxScrollExtent - 200 &&
+                                                                      !_model.isLoadingAlerts &&
+                                                                      _model.hasMoreAlerts &&
+                                                                      _model.lastAlertDocument != null) {
+                                                                    _model.isLoadingAlerts = true;
+                                                                    safeSetState(() {});
+                                                                    DealAlertsRecord.collection
+                                                                        .orderBy('scannedAt', descending: true)
+                                                                        .startAfterDocument(_model.lastAlertDocument!)
+                                                                        .limit(20)
+                                                                        .get()
+                                                                        .then((snap) {
+                                                                      final docs = snap.docs
+                                                                          .map((d) => DealAlertsRecord.fromSnapshot(d))
+                                                                          .toList();
+                                                                      _model.loadedDealAlerts.addAll(docs);
+                                                                      _model.lastAlertDocument = snap.docs.isNotEmpty ? snap.docs.last : null;
+                                                                      _model.hasMoreAlerts = snap.docs.length >= 20;
+                                                                      _model.isLoadingAlerts = false;
+                                                                      safeSetState(() {});
+                                                                    });
+                                                                  }
+                                                                  return false;
+                                                                },
+                                                                child: ListView
                                                                   .separated(
                                                                 padding: EdgeInsets
                                                                     .symmetric(
@@ -7545,8 +7600,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                 scrollDirection:
                                                                     Axis.vertical,
                                                                 itemCount:
-                                                                    listViewSavedPropertiesRecordList
-                                                                        .length,
+                                                                    totalCount,
                                                                 separatorBuilder: (_,
                                                                         __) =>
                                                                     SizedBox(
@@ -7555,8 +7609,10 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                 itemBuilder:
                                                                     (context,
                                                                         listViewIndex) {
+                                                                  // --- Saved property card ---
+                                                                  if (listViewIndex < savedList.length) {
                                                                   final listViewSavedPropertiesRecord =
-                                                                      listViewSavedPropertiesRecordList[
+                                                                      savedList[
                                                                           listViewIndex];
                                                                   return Stack(
                                                                     alignment:
@@ -7618,7 +7674,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                           child:
                                                                               ImageCardWidget(
                                                                             key:
-                                                                                Key('Keya8c_${listViewIndex}_of_${listViewSavedPropertiesRecordList.length}'),
+                                                                                Key('Keya8c_${listViewIndex}_of_${totalCount}'),
                                                                             price:
                                                                                 listViewSavedPropertiesRecord.price,
                                                                             address:
@@ -7716,7 +7772,130 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                       ),
                                                                     ],
                                                                   );
+                                                                  }
+                                                                  // --- Deal alert card (with lightning bolt) ---
+                                                                  final alert = uniqueAlerts[listViewIndex - savedList.length];
+                                                                  return Stack(
+                                                                    alignment: AlignmentDirectional(1.0, -1.0),
+                                                                    children: [
+                                                                      Padding(
+                                                                        padding: EdgeInsetsDirectional.fromSTEB(8.0, 0.0, 8.0, 0.0),
+                                                                        child: InkWell(
+                                                                          splashColor: Colors.transparent,
+                                                                          focusColor: Colors.transparent,
+                                                                          hoverColor: Colors.transparent,
+                                                                          highlightColor: Colors.transparent,
+                                                                          onTap: () async {
+                                                                            // Save deal alert to savedProperties on tap
+                                                                            var savedRef = SavedPropertiesRecord.collection
+                                                                                .doc('${currentUserUid}_${alert.zpid}');
+                                                                            await savedRef.set(
+                                                                              createSavedPropertiesRecordData(
+                                                                                method: alert.method,
+                                                                                impValue: alert.impValue,
+                                                                                futureValue: alert.futureValue,
+                                                                                downPayment: alert.downPayment,
+                                                                                mortgage: alert.mortgage,
+                                                                                sellingCosts: alert.sellingCosts,
+                                                                                totalCosts: alert.totalCosts,
+                                                                                grossReturn: alert.grossReturn,
+                                                                                netReturn: alert.netReturn,
+                                                                                address: alert.address,
+                                                                                imgSrc: alert.imgSrc,
+                                                                                latlng: alert.latlng,
+                                                                                netRoi: alert.netROI,
+                                                                                detailUrl: alert.detailUrl,
+                                                                                bedrooms: alert.bedrooms,
+                                                                                bathrooms: alert.bathrooms,
+                                                                                livingArea: alert.livingArea,
+                                                                                price: alert.price,
+                                                                                zestimate: alert.zestimate,
+                                                                                yearBuilt: alert.yearBuilt,
+                                                                                description: alert.description,
+                                                                                loanAmount: alert.loanAmount,
+                                                                                cashNeeded: alert.cashNeeded,
+                                                                                id: alert.zpid,
+                                                                                userRef: currentUserReference,
+                                                                                lotAreaValue: alert.lotAreaValue,
+                                                                                duration: alert.duration,
+                                                                                notes: '',
+                                                                                notesARV: '',
+                                                                              ),
+                                                                            );
+                                                                            ScaffoldMessenger.of(context).showSnackBar(
+                                                                              SnackBar(
+                                                                                content: Text('Saved ${alert.address}'),
+                                                                                duration: Duration(seconds: 2),
+                                                                              ),
+                                                                            );
+                                                                          },
+                                                                          child: ImageCardWidget(
+                                                                            key: Key('DealAlert_${alert.reference.id}'),
+                                                                            price: alert.price,
+                                                                            address: alert.address,
+                                                                            duration: alert.duration,
+                                                                            method: alert.method,
+                                                                            grossReturn: alert.grossReturn,
+                                                                            totalCosts: alert.totalCosts,
+                                                                            financingCosts: alert.mortgage,
+                                                                            bedrooms: alert.bedrooms,
+                                                                            baths: alert.bathrooms,
+                                                                            livingArea: alert.livingArea,
+                                                                            lotArea: alert.lotAreaValue,
+                                                                            proposedClosedDate: null,
+                                                                            proposedSaleDate: null,
+                                                                            imgSrc: alert.imgSrc,
+                                                                            zpid: alert.zpid,
+                                                                            estimatedValue: alert.futureValue,
+                                                                            downPayment: alert.downPayment,
+                                                                            yearBuilt: alert.yearBuilt,
+                                                                            loanAmount: alert.loanAmount,
+                                                                            detailUrl: alert.detailUrl,
+                                                                            cashNeeded: alert.cashNeeded,
+                                                                            netReturn: alert.netReturn,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                      // Lightning bolt icon - top right
+                                                                      Padding(
+                                                                        padding: EdgeInsets.all(8.0),
+                                                                        child: Container(
+                                                                          width: 32.0,
+                                                                          height: 32.0,
+                                                                          decoration: BoxDecoration(
+                                                                            color: FlutterFlowTheme.of(context).primary,
+                                                                            shape: BoxShape.circle,
+                                                                          ),
+                                                                          child: Icon(
+                                                                            Icons.bolt,
+                                                                            color: FlutterFlowTheme.of(context).info,
+                                                                            size: 20.0,
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  );
+                                                                  // --- Loading indicator at bottom ---
+                                                                  if (listViewIndex >= savedList.length + uniqueAlerts.length) {
+                                                                    return Center(
+                                                                      child: Padding(
+                                                                        padding: EdgeInsets.all(16.0),
+                                                                        child: SizedBox(
+                                                                          width: 24.0,
+                                                                          height: 24.0,
+                                                                          child: CircularProgressIndicator(
+                                                                            strokeWidth: 2.0,
+                                                                            valueColor: AlwaysStoppedAnimation<Color>(
+                                                                              FlutterFlowTheme.of(context).secondary,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ),
+                                                                    );
+                                                                  }
+                                                                  return SizedBox.shrink();
                                                                 },
+                                                              ),
                                                               );
                                                             },
                                                           );
