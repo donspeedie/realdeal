@@ -45,14 +45,25 @@ function adaptParams(endpoint, config) {
 
 // Normalize new API response to match old response shape
 function adaptResponse(endpoint, rawData) {
+  if (!rawData) {
+    console.warn(`[ZillowAPI] adaptResponse: rawData is ${rawData} for ${endpoint}`);
+    return endpoint === "propertyExtendedSearch" ? {props: [], totalResultCount: 0} : {};
+  }
+
   // New API wraps responses in {status: "OK", data: [...]}
-  const data = (rawData && rawData.status === "OK" && rawData.data !== undefined)
+  const data = (rawData.status === "OK" && rawData.data !== undefined)
     ? rawData.data
     : rawData;
 
   // Search endpoint: new API returns flat array, old returned {props: [], totalResultCount}
   if (endpoint === "propertyExtendedSearch" && Array.isArray(data)) {
     return { props: data, totalResultCount: data.length };
+  }
+
+  // Search endpoint: handle {props: [...]} already in correct shape
+  if (endpoint === "propertyExtendedSearch" && !data?.props) {
+    console.warn(`[ZillowAPI] adaptResponse: no props array for ${endpoint}`, JSON.stringify(data).substring(0, 200));
+    return {props: [], totalResultCount: 0};
   }
 
   if (endpoint === "zestimate" && data) {
@@ -112,12 +123,14 @@ async function fetchZillowDataWithCache(endpoint, config, maxRetries = 3) {
           data: adaptResponse(endpoint, response.data),
         };
       } catch (err) {
-        console.log(err.response);
-        if (err.response.status === 429) {
+        const errStatus = err.response?.status;
+        const errData = err.response?.data;
+        console.warn(`[ZillowAPI] ${endpoint} error: status=${errStatus} message=${err.message}`, errData ? JSON.stringify(errData).substring(0, 200) : "");
+        if (errStatus === 429) {
           await new Promise((r) => setTimeout(r, 2000 + retries * 1000));
           retries++;
         } else {
-          throw err;
+          throw new Error(`Zillow API ${endpoint} failed: ${err.message} (status=${errStatus})`);
         }
       }
     }

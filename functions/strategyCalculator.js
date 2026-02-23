@@ -31,17 +31,7 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
     const config = getConfig(method, params, safeTwoBedAvg);
     if (!config) throw new Error(`Invalid strategy method: ${method}`);
 
-    console.log(`⚙️ Config for ${method}:`, {
-      duration: config.duration,
-      impFactor: config.impFactor,
-      rate: config.rate,
-      addOnArea: config.addOnArea,
-      permitsFees: config.permitsFees,
-      salRate: config.salRate
-    });
-
     const futureLivingArea = calculateFutureLivingArea(method, livingArea, config);
-    console.log(`📐 Future Living Area: ${livingArea} → ${futureLivingArea} sqft`);
 
     // Override support: Use prop.futureValue or params.futureValue if provided
     let futureValue;
@@ -111,15 +101,6 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
         estimateMonthlyRent(futureValue, propertyState);
 
       const rentRatePercent = (propertyState === 'CA' || propertyState === 'California') ? '0.5%' : '1%';
-      console.log(`🏠 RENTAL RENT SOURCE for ${prop.zpid}:`, {
-        paramsMonthlyRent: params.monthlyRent,
-        propRentZestimate: prop.rentZestimate,
-        fallbackEstimate: estimateMonthlyRent(futureValue, propertyState),
-        selectedMonthlyRent: monthlyRent,
-        state: propertyState,
-        rentSource: params.monthlyRent ? 'params.monthlyRent' : (prop.rentZestimate ? 'prop.rentZestimate' : `${rentRatePercent} fallback`)
-      });
-
       const annualRent = Number(monthlyRent) * 12;
       // Calculate operating expenses using database-provided rates
       const annualMaintenance = round(Number(futureValue) * Number(config.maintenanceRate));

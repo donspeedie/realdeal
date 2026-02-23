@@ -1175,14 +1175,20 @@ exports.scanDealsDaily = onSchedule({
       let totalPropsScanned = 0;
 
       for (let page = 1; page <= maxPages; page++) {
-        const response = await fetchZillowDataWithCache("propertyExtendedSearch", {
-          location: cfg.location,
-          page,
-          status_Type: cfg.status_Type || "FOR_SALE",
-          propertyType: cfg.propertyType || "SINGLE_FAMILY",
-          minPrice: cfg.minPrice,
-          maxPrice: cfg.maxPrice,
-        });
+        let response;
+        try {
+          response = await fetchZillowDataWithCache("propertyExtendedSearch", {
+            location: cfg.location,
+            page,
+            status_Type: cfg.status_Type || "FOR_SALE",
+            propertyType: cfg.propertyType || "SINGLE_FAMILY",
+            minPrice: cfg.minPrice,
+            maxPrice: cfg.maxPrice,
+          });
+        } catch (fetchErr) {
+          console.error(`[DealScanner] API fetch failed for ${label} page ${page}: ${fetchErr.message}`);
+          break; // Skip remaining pages for this market
+        }
 
         const props = response?.data?.props || [];
         console.log(`[DealScanner] ${label} page ${page}: ${props.length} properties`);
@@ -1394,14 +1400,20 @@ exports.triggerDealScan = onCall({
     const maxPages = cfg.maxPages || 5;
     try {
       for (let page = 1; page <= maxPages; page++) {
-        const response = await fetchZillowDataWithCache("propertyExtendedSearch", {
-          location: cfg.location,
-          page,
-          status_Type: cfg.status_Type || "FOR_SALE",
-          propertyType: cfg.propertyType || "SINGLE_FAMILY",
-          minPrice: cfg.minPrice,
-          maxPrice: cfg.maxPrice,
-        });
+        let response;
+        try {
+          response = await fetchZillowDataWithCache("propertyExtendedSearch", {
+            location: cfg.location,
+            page,
+            status_Type: cfg.status_Type || "FOR_SALE",
+            propertyType: cfg.propertyType || "SINGLE_FAMILY",
+            minPrice: cfg.minPrice,
+            maxPrice: cfg.maxPrice,
+          });
+        } catch (fetchErr) {
+          console.error(`[DealScanner] API fetch failed for ${cfg.location} page ${page}: ${fetchErr.message}`);
+          break;
+        }
 
         const props = response?.data?.props || [];
         console.log(`[DealScanner] ${cfg.location} page ${page}: ${props.length} properties`);

@@ -9,8 +9,6 @@ const {
 const { round } = Math;
 
 async function processProperty(prop, params, sequence, total) {
-  console.log("🚀 PROCESSPROPERTY CALLED for zpid:", prop.zpid);
-
   if (!prop.price || !prop.livingArea) {
     return [{
       error: "Missing price or livingArea",
@@ -20,11 +18,15 @@ async function processProperty(prop, params, sequence, total) {
     }];
   }
 
+  // Normalize lot size to sqft (Zillow API returns lotAreaUnit as "sqft" or "acres")
+  let lotSize = prop.lotAreaValue || 0;
+  if (prop.lotAreaUnit && prop.lotAreaUnit.toLowerCase() === "acres") {
+    lotSize = lotSize * 43560;
+  }
+
   // Filter out properties with lot sizes below minimum
   const MIN_LOT_SIZE = 3200; // 3,200 sqft minimum
-  const lotSize = prop.lotAreaValue || 0;
-  if (lotSize < MIN_LOT_SIZE) {
-    console.log(`Filtering out property ${prop.zpid} - lot size ${lotSize} sqft < ${MIN_LOT_SIZE} sqft minimum`);
+  if (lotSize > 0 && lotSize < MIN_LOT_SIZE) {
     return [];
   }
 
@@ -32,63 +34,31 @@ async function processProperty(prop, params, sequence, total) {
 
   // Filter out apartments based on address using regex patterns
   const apartmentPatterns = [
-    { pattern: /\bapt\b/i, name: "APT (word boundary)" },
-    { pattern: /\bapt[#\-\s\d]/i, name: "APT + separator" },
-    { pattern: /[,.\(]apt/i, name: "APT after punctuation" },
-    { pattern: /apartment/i, name: "apartment" },
-    { pattern: /\bunit\b/i, name: "unit (word boundary)" },
-    { pattern: /\bunit[#\-\s\d]/i, name: "unit + separator" },
-    { pattern: /[,.\(]unit/i, name: "unit after punctuation" },
-    { pattern: /\bste\b/i, name: "ste (word boundary)" },
-    { pattern: /\bste[#\-\s\d]/i, name: "ste + separator" },
-    { pattern: /[,.\(]ste/i, name: "ste after punctuation" },
-    { pattern: /\bsuite\b/i, name: "suite (word boundary)" },
-    { pattern: /\bsuite[#\-\s\d]/i, name: "suite + separator" },
+    /\bapt\b/i, /\bapt[#\-\s\d]/i, /[,.\(]apt/i, /apartment/i,
+    /\bunit\b/i, /\bunit[#\-\s\d]/i, /[,.\(]unit/i,
+    /\bste\b/i, /\bste[#\-\s\d]/i, /[,.\(]ste/i,
+    /\bsuite\b/i, /\bsuite[#\-\s\d]/i,
   ];
 
-  for (const { pattern, name } of apartmentPatterns) {
+  for (const pattern of apartmentPatterns) {
     if (pattern.test(address)) {
-      console.log(`Filtering out property ${prop.zpid} - matches '${name}' pattern in address: "${address}"`);
       return [];
     }
   }
 
   const addressParts = address.split(" ");
   const pincode = addressParts[addressParts.length - 1];
-
-  console.log("🗺️ Address parsing:", {
-    fullAddress: address,
-    addressParts: addressParts,
-    extractedPincode: pincode,
-    propertyKeys: Object.keys(prop),
-    hasAddress: !!prop.address,
-    hasStreetAddress: !!prop.streetAddress
-  });
-
-  // Check environment variables
-  console.log("🔑 Environment check:", {
-    hasRapidApiKey: !!process.env.RAPID_API_KEY,
-    rapidApiKeyLength: process.env.RAPID_API_KEY ? process.env.RAPID_API_KEY.length : 0,
-    rapidApiKeyStart: process.env.RAPID_API_KEY ? process.env.RAPID_API_KEY.substring(0, 8) + "..." : "MISSING"
-  });
   const zpid = prop.zpid;
 
-  // Log API call parameters
   const soldParams = { location: pincode };
   const forSaleParams = { location: pincode };
-
-  console.log("📡 API call parameters:", {
-    soldParams: soldParams,
-    forSaleParams: forSaleParams,
-    zpid: zpid
-  });
   let zestimateRes = { data: {} };
   let propertyDetailsRes = { data: {} };
   let soldRedfinRes = { data: {} };
   let forSaleRedfinRes = { data: {} };
 
   if (params.redfinForSaleComps && Array.isArray(params.redfinForSaleComps) && params.redfinSoldComps && Array.isArray(params.redfinSoldComps)) {
-    console.log("ℹ️ Using provided redfinForSaleComps from params, count:", params.redfinForSaleComps.length);
+    // Using provided Redfin comps from params
     [zestimateRes, propertyDetailsRes] = await Promise.all([
       fetchZillowDataWithCache("zestimate", { zpid }).catch((err) => {
         console.log("❌ Zillow zestimate error:", err.message);
@@ -100,7 +70,7 @@ async function processProperty(prop, params, sequence, total) {
       })
     ]);
   } else {
-    console.log("ℹ️ No redfinForSaleComps provided in params, will fetch from Redfin API");
+    // Fetching Redfin comps from API
     [zestimateRes, propertyDetailsRes, soldRedfinRes, forSaleRedfinRes] = await Promise.all([
       fetchZillowDataWithCache("zestimate", { zpid }).catch((err) => {
         console.log("❌ Zillow zestimate error:", err.message);
@@ -315,7 +285,7 @@ async function processProperty(prop, params, sequence, total) {
       lotSize: extractLotSize(matchedProperty)
     });
   } else {
-    console.log("⚠️ Subject property not found in Redfin results - will use fallback level assumptions");
+    console.warn("[PropertyProcessor] Subject property not found in Redfin results - using fallback level assumptions");
     console.log("   Search criteria:", {
       address: subjectAddress.substring(0, 50),
       sqft: subjectSqft,
@@ -426,18 +396,14 @@ async function processProperty(prop, params, sequence, total) {
       delete globalSettings.permitsFees;
 
       const enhancedParams = globalSettings;
-      // Add levels data to prop before passing to strategy calculator
+      // Add levels data and normalized lot size to prop before passing to strategy calculator
       const propWithLevels = {
         ...prop,
+        lotAreaValue: lotSize,
         levels: subjectLevels
       };
       const strategyResult = calculateStrategy(method, propWithLevels, enhancedParams, pricePerSqFt, twoBedAvg, bedroomAnalysis);
-      console.log(`🔍 Strategy result for ${prop.zpid} ${method}:`, {
-        hasResult: !!strategyResult,
-        hasMethod: strategyResult?.method,
-        hasNetReturn: strategyResult?.netReturn,
-        keys: strategyResult ? Object.keys(strategyResult) : null
-      });
+      // strategyResult logged only on error
       if (!strategyResult) return null; // strategyCalculator already filtered based on business rules
       return {
         ...strategyResult,
@@ -464,7 +430,7 @@ async function processProperty(prop, params, sequence, total) {
         descriptionAnalysis,
         sequence,
         total,
-        lotAreaValue: round(prop.lotAreaValue),
+        lotAreaValue: round(lotSize),
         pincode,
         price: prop.price,
         livingArea: prop.livingArea,
