@@ -12,21 +12,11 @@ function ensureDouble(value) {
 
 function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroomAnalysis = []) {
   try {
-    console.log(`\n🔨 === CALCULATING ${method} STRATEGY for ${prop.zpid} ===`);
-
     const purchasePrice = round(Number(prop?.price || 0));
     const livingArea = round(Number(prop?.livingArea || 0));
     const bedrooms = round(Number(prop?.bedrooms || 0));
     const safePricePerSqFt = Number(pricePerSqFt) || 250;
     const safeTwoBedAvg = Number(twoBedAvg) || 0;
-
-    console.log(`📍 Property Details:`, {
-      zpid: prop.zpid,
-      price: purchasePrice,
-      livingArea: livingArea,
-      bedrooms: bedrooms,
-      pricePerSqFt: safePricePerSqFt
-    });
 
     const config = getConfig(method, params, safeTwoBedAvg);
     if (!config) throw new Error(`Invalid strategy method: ${method}`);
@@ -37,17 +27,13 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
     let futureValue;
     if (typeof prop.futureValue !== "undefined" && prop.futureValue !== null) {
       futureValue = Number(prop.futureValue);
-      console.log(`🔧 Using OVERRIDE futureValue from prop: $${futureValue}`);
     } else if (typeof params.futureValue !== "undefined" && params.futureValue !== null) {
       futureValue = Number(params.futureValue);
-      console.log(`🔧 Using OVERRIDE futureValue from params: $${futureValue}`);
     } else {
-      console.log(`💰 Calculating futureValue for ${method}...`);
       futureValue = estimateFutureValue(
           method, futureLivingArea, safePricePerSqFt, config, bedrooms,
           bedroomAnalysis, params.filteredComps, prop,
       );
-      console.log(`💰 Calculated futureValue: $${futureValue} (method: ${config.valuationMethod})`);
     }
 
     // console.log("[DEBUG] futureValue: ", futureValue); // Removed for cleaner logs
@@ -56,40 +42,26 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
     let impValue;
     if (typeof prop.impValue !== "undefined" && prop.impValue !== null) {
       impValue = Number(prop.impValue);
-      console.log(`🔧 Using OVERRIDE impValue from prop: $${impValue}`);
     } else if (typeof params.impValue !== "undefined" && params.impValue !== null) {
       impValue = Number(params.impValue);
-      console.log(`🔧 Using OVERRIDE impValue from params: $${impValue}`);
     } else {
       impValue = calculateImprovementCost(method, futureLivingArea, config);
-      console.log(`🔨 Calculated impValue: $${impValue}`);
     }
 
     let loanDetails = calculateLoan(futureValue, purchasePrice, impValue, config);
-    console.log(`💸 Loan Details:`, {
-      loanAmount: loanDetails.loanAmount,
-      downPayment: loanDetails.downPayment,
-      monthlyPayment: loanDetails.monthlyPayment,
-      loanPayments: loanDetails.loanPayments,
-      loanFees: loanDetails.loanFees
-    });
 
     // Override support: Use prop.loanPayments or params.loanPayments if provided
     if (typeof prop.loanPayments !== "undefined" && prop.loanPayments !== null) {
       loanDetails.loanPayments = Number(prop.loanPayments);
-      console.log(`🔧 OVERRIDE loanPayments from prop: $${loanDetails.loanPayments}`);
     } else if (typeof params.loanPayments !== "undefined" && params.loanPayments !== null) {
       loanDetails.loanPayments = Number(params.loanPayments);
-      console.log(`🔧 OVERRIDE loanPayments from params: $${loanDetails.loanPayments}`);
     } else {}
 
     // Override support: Use prop.loanFees or params.loanFees if provided
     if (typeof prop.loanFees !== "undefined" && prop.loanFees !== null) {
       loanDetails.loanFees = Number(prop.loanFees);
-      console.log(`🔧 OVERRIDE loanFees from prop: $${loanDetails.loanFees}`);
     } else if (typeof params.loanFees !== "undefined" && params.loanFees !== null) {
       loanDetails.loanFees = Number(params.loanFees);
-      console.log(`🔧 OVERRIDE loanFees from params: $${loanDetails.loanFees}`);
     } else {}
 
     const closingDates = calculateClosingDates(config.duration);
@@ -151,24 +123,14 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
 
       const netReturn = round(netSaleProceeds - totalCosts);
 
-      console.log(`📊 RENTAL FINAL CALCULATION:`, {
-        netRentalIncomeFiveYears: netRentalIncomeFiveYears,
-        resaleValue: resaleValue,
-        netSaleProceeds: netSaleProceeds,
-        totalCosts: totalCosts,
-        netReturn: netReturn,
-        annualCashFlow: annualCashFlow,
-        profitable: netReturn > 0
-      });
-
       // Allow bypassing minimum return filter via params
       const minReturn = params.bypassMinReturn ? 0 : (params.minReturn || 10000);
       if (netReturn <= minReturn && !params.bypassMinReturn) {
-        console.log(`❌ Low net return (${netReturn}) for ${prop?.zpid} ${method} - minimum $${minReturn.toLocaleString()} required - REJECTED`);
+        console.log(`[${method}] ${prop?.zpid} rejected: $${netReturn} < $${minReturn}`);
         return null;
       }
 
-      console.log(`✅ ${method} strategy ACCEPTED: Net Return = $${netReturn}`);
+      console.log(`[${method}] ${prop?.zpid} ACCEPTED: $${netReturn}`);
 
       // ROE and GROC for rental
       const cashNeeded = Number(loanDetails.downPayment || 0) + Number(impValue || 0) + Number(config.permitsFees || 0) + Number(config.propertyTaxes || 0);
@@ -247,7 +209,6 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
 
     // For all non-rental strategies...
     const sellingCosts = round(Number(futureValue) * Number(config.salRate));
-    console.log(`💲 Selling Costs: $${sellingCosts} (${config.salRate * 100}% of $${futureValue})`);
 
     const totalCosts = calculateTotalCosts({
       purchasePrice,
@@ -260,38 +221,18 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
       sellingCosts: sellingCosts,
     });
 
-    console.log(`💰 Total Costs Breakdown:`, {
-      purchasePrice: purchasePrice,
-      impValue: impValue,
-      loanPayments: loanDetails.loanPayments,
-      loanFees: loanDetails.loanFees,
-      permitsFees: Number(prop?.permitsFees || config.permitsFees) || 0,
-      propertyTaxes: config.propertyTaxes,
-      propertyIns: config.propertyIns,
-      sellingCosts: sellingCosts,
-      TOTAL: totalCosts
-    });
-
     const netSaleProceeds = Number(futureValue) - Number(sellingCosts);
     const cashNeeded = Number(loanDetails.downPayment) + Number(impValue) + Number(config.permitsFees) + Number(config.propertyTaxes);
     const netReturn = Number(futureValue) - Number(totalCosts);
 
-    console.log(`📊 FINAL CALCULATION:`, {
-      futureValue: futureValue,
-      totalCosts: totalCosts,
-      netReturn: netReturn,
-      cashNeeded: cashNeeded,
-      profitable: netReturn > 0
-    });
-
     // Allow bypassing minimum return filter via params
     const minReturn = params.bypassMinReturn ? 0 : (params.minReturn || 10000);
     if (netReturn <= minReturn && !params.bypassMinReturn) {
-      console.log(`❌ Low net return (${netReturn}) for ${prop?.zpid} ${method} - minimum $${minReturn.toLocaleString()} required - REJECTED`);
+      console.log(`[${method}] ${prop?.zpid} rejected: $${netReturn} < $${minReturn}`);
       return null;
     }
 
-    console.log(`✅ ${method} strategy ACCEPTED: Net Return = $${netReturn}`);
+    console.log(`[${method}] ${prop?.zpid} ACCEPTED: $${netReturn}`);
 
     const netROI = totalCosts > 0 ? (Number(netReturn) / Number(totalCosts)) : 0; // Return as decimal for frontend percentage conversion
     const optimalOffer = Number(futureValue) - Number(sellingCosts) - Number(impValue) -
@@ -465,12 +406,9 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
     // Check if Add-On will physically fit on the lot before valuation
     const addOnFeasibility = checkAddOnFeasibility(subjectProperty, config);
     if (!addOnFeasibility.feasible) {
-      console.log(`❌ Add-On not feasible: ${addOnFeasibility.reason}`);
       config.valuationMethod = "addon_lot_size_insufficient";
       return -1; // Signal Add-On strategy rejection
     }
-
-    console.log(`✅ Add-On lot feasibility: ${addOnFeasibility.reason} (${subjectProperty.lotAreaValue || 'unknown'} sqft lot)`);
 
     // Add-On calculation: Use target bedroom comps for total futureValue
     const targetBedrooms = Math.min(5, bedrooms + 1);
@@ -489,8 +427,6 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
       const futureValueCapped = round(baseValue + cappedIncrement);
 
       config.valuationMethod = `bedroom_ceiling_cap_${targetBedrooms}BR`;
-      console.log(`🏠 Bedroom ceiling cap applied: ${bedrooms}BR→${targetBedrooms}BR limited to +$${cappedIncrement.toLocaleString()} increment`);
-      console.log(`   Base value: $${baseValue.toLocaleString()} + Increment: $${cappedIncrement.toLocaleString()} = ARV: $${futureValueCapped.toLocaleString()}`);
       return futureValueCapped;
     }
 
@@ -519,8 +455,6 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
 
         return passesSizeFilter && passesPriceFilter;
       });
-
-      console.log(`🔍 Size+Price filtering: ${targetBedroomComps.length} ${targetBedrooms}BR comps → ${sizeAndPriceFilteredComps.length} filtered comps (75%-125% size, ±40% price of subject)`);
 
       // Use filtered comps if we have enough, otherwise fall back to all target bedroom comps
       const compsToUse = sizeAndPriceFilteredComps.length >= 2 ? sizeAndPriceFilteredComps : targetBedroomComps;
@@ -552,27 +486,21 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
         const wasAdjusted = Math.abs(avgTargetPricePerSqFt - cappedTargetPrice) > 1;
         const adjustmentNote = wasAdjusted ? ` (adjusted from $${Math.round(avgTargetPricePerSqFt)})` : "";
 
-        console.log(`✅ Add-On Bedroom: ${futureArea} sqft × $${roundedTargetPrice}/sqft (${targetBedrooms}BR ${filterType} avg${adjustmentNote}) × ${config.impFactor} + extra ($${config.extraValue}) = $${futureValue} [${compsToUse.length} comps used]`);
         return futureValue;
       }
     }
 
     // Fallback: Use standard market rate calculation if insufficient target bedroom comps
-    console.log(`⚠️ Insufficient ${targetBedrooms}BR comps (${targetBedroomComps.length} found), using fallback calculation`);
     const futureValue = round(futureArea * pricePerSqFt * config.impFactor) + config.extraValue;
     config.valuationMethod = "fallback_market_rate";
-    console.log(`✅ Add-On Bedroom (fallback): ${futureArea} sqft × $${pricePerSqFt}/sqft × ${config.impFactor} + extra ($${config.extraValue}) = $${futureValue}`);
     return futureValue;
   } else if (method === "ADU") {
     // Check if ADU will physically fit on the lot before valuation
     const aduFeasibility = checkADULotFeasibility(subjectProperty, config);
     if (!aduFeasibility.feasible) {
-      console.log(`❌ ADU not feasible: ${aduFeasibility.reason}`);
       config.valuationMethod = "adu_lot_size_insufficient";
       return -1; // Signal ADU strategy rejection
     }
-
-    console.log(`✅ ADU lot feasibility: ${aduFeasibility.reason} (${subjectProperty.lotAreaValue || 'unknown'} sqft lot)`);
 
     // Income Approach for ADU valuation using rental income potential
     const mainHouseValue = round(subjectProperty.livingArea * Math.min(pricePerSqFt, 500)); // Increased cap
@@ -590,10 +518,8 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
 
       if (cappedValue < totalValue) {
         config.valuationMethod = "main_house_plus_adu_income_approach_capped";
-        console.log(`✅ ADU Income Approach (CAPPED): calculated $${totalValue} → capped to $${cappedValue} (list price $${subjectProperty.price || 0} + 2BR avg $${config.extraValue || 0})`);
       } else {
         config.valuationMethod = "main_house_plus_adu_income_approach";
-        console.log(`✅ ADU Income Approach: (main house ($${mainHouseValue}) + ADU income value ($${aduIncomeValue})) × ${config.impFactor} = $${totalValue}`);
       }
       return cappedValue;
     }
@@ -608,10 +534,8 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
 
     if (cappedValue < adjustedValue) {
       config.valuationMethod = "main_house_plus_adu_premium_capped";
-      console.log(`✅ ADU premium fallback (CAPPED): calculated $${adjustedValue} → capped to $${cappedValue} (list price $${subjectProperty.price || 0} + 2BR avg $${config.extraValue || 0})`);
     } else {
       config.valuationMethod = "main_house_plus_adu_premium";
-      console.log(`✅ ADU premium fallback: main house ($${mainHouseValue}) × (1 + ${Math.round(aduPremium*100)}%) × ${config.impFactor} = $${adjustedValue}`);
     }
     return cappedValue;
   } else if (method === "Rental") {
@@ -631,8 +555,6 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
     config
   );
 
-  console.log(`📐 Price adjustment: $${pricePerSqFt}/sqft → $${cappedPricePerSqFt}/sqft (capped) → $${adjustedPricePerSqFt}/sqft (size-adjusted)`);
-
   const calculatedValue = round(futureArea * adjustedPricePerSqFt * config.impFactor);
 
   return calculatedValue;
@@ -641,7 +563,6 @@ function estimateFutureValue(method, futureArea, pricePerSqFt, config, bedrooms,
 function calculateSizeAdjustedPrice(futureArea, basePricePerSqFt, filteredComps, config) {
   // Calculate average comp size for comparison
   if (!filteredComps || filteredComps.length === 0) {
-    console.log(`⚠️ No comps available for size adjustment - using base price $${basePricePerSqFt}/sqft`);
     return basePricePerSqFt; // No adjustment if no comps available
   }
 
@@ -665,8 +586,6 @@ function calculateSizeAdjustedPrice(futureArea, basePricePerSqFt, filteredComps,
   const cappedAdjustment = Math.max(-0.15, Math.min(0.15, priceAdjustment)); // ±15% max
 
   const adjustedPrice = Math.round(basePricePerSqFt * (1 + cappedAdjustment));
-
-  console.log(`📐 Size Adjustment: ${futureArea} sqft vs ${Math.round(avgCompSize)} sqft avg (${(sizeDeviation*100).toFixed(1)}% diff) → $${basePricePerSqFt}/sqft → $${adjustedPrice}/sqft (${(cappedAdjustment*100).toFixed(1)}%)`);
 
   return adjustedPrice;
 }
@@ -1028,8 +947,6 @@ function calculateIncrementalBedroomValue(currentBeds, targetBeds, filteredComps
   // Step 2: Get target bedroom tier value from filtered comps
   const targetBedroomValue = calculateBedroomTierValue(targetBeds, filteredComps, futureArea);
 
-  console.log(`🔍 Add-On bedroom analysis: ${currentBeds}BR value=$${currentBedroomValue}, ${targetBeds}BR value=$${targetBedroomValue}`);
-
   // Step 3: Calculate incremental difference with multiple restrictions
   if (currentBedroomValue > 0 && targetBedroomValue > 0) {
     const rawIncrementalValue = targetBedroomValue - currentBedroomValue;
@@ -1055,17 +972,14 @@ function calculateIncrementalBedroomValue(currentBeds, targetBeds, filteredComps
     const finalMaxIncrement = Math.min(maxAbsoluteIncrement, maxPercentageIncrement, maxConstructionIncrement);
 
     if (rawIncrementalValue > 0 && rawIncrementalValue <= finalMaxIncrement) {
-      console.log(`✅ Incremental bedroom value: $${rawIncrementalValue} (capped at $${finalMaxIncrement})`);
       return Math.round(rawIncrementalValue);
     } else if (rawIncrementalValue > finalMaxIncrement) {
-      console.log(`⚠️ Incremental value capped: $${rawIncrementalValue} → $${finalMaxIncrement}`);
       return finalMaxIncrement;
     }
   }
 
   // Fallback: Use conservative fixed bedroom value increment
   const fallbackIncrement = calculateFallbackBedroomIncrement(subjectProperty);
-  console.log(`⚠️ Using fallback bedroom increment: $${fallbackIncrement}`);
   return fallbackIncrement;
 }
 
@@ -1077,7 +991,6 @@ function calculateBedroomTierValue(bedrooms, filteredComps, referenceArea) {
   });
 
   if (bedroomComps.length < 2) {
-    console.log(`⚠️ Insufficient ${bedrooms}BR comps: ${bedroomComps.length} found`);
     return 0;
   }
 
@@ -1116,7 +1029,6 @@ function calculateBedroomTierValue(bedrooms, filteredComps, referenceArea) {
   const weightedAvgPrice = totalWeight > 0 ?
     weightedComps.reduce((sum, comp) => sum + (comp.price * comp.weight), 0) / totalWeight : 0;
 
-  console.log(`📊 ${bedrooms}BR tier: $${Math.round(weightedAvgPrice)} from ${weightedComps.length} comps`);
   return Math.round(weightedAvgPrice);
 }
 
@@ -1200,18 +1112,12 @@ function checkADULotFeasibility(subjectProperty, config) {
   if (levels && levels >= 1 && levels <= 4) {
     // Use actual levels data from Redfin API
     estimatedFootprint = mainHouseSqft / levels;
-    console.log(`🏠 Using actual levels data for ADU: ${levels} stories, footprint = ${Math.round(estimatedFootprint)} sqft`);
   } else {
     // Fallback: Estimate actual ground footprint - assume average 1.5 stories (between 1 and 2 story homes)
     // For single story: footprint = living area
     // For two story: footprint = living area / 2
     // Average assumption: footprint = living area / 1.5
     estimatedFootprint = mainHouseSqft / 1.5;
-    if (levels && (levels < 1 || levels > 4)) {
-      console.log(`⚠️ Invalid levels data (${levels}), using fallback: 1.5 stories, footprint = ${Math.round(estimatedFootprint)} sqft`);
-    } else {
-      console.log(`🏠 Using estimated levels for ADU: 1.5 stories (fallback), footprint = ${Math.round(estimatedFootprint)} sqft`);
-    }
   }
 
   const houseFootprint = Math.max(estimatedFootprint, 800); // Minimum 800 sqft footprint
@@ -1297,15 +1203,9 @@ function checkAddOnFeasibility(subjectProperty, config) {
   if (levels && levels >= 1 && levels <= 4) {
     // Use actual levels data from Redfin API
     houseFootprint = mainHouseSqft / levels;
-    console.log(`🏠 Using actual levels data for Add-On: ${levels} stories, footprint = ${Math.round(houseFootprint)} sqft`);
   } else {
     // Fallback: Assume 1.25 stories average
     houseFootprint = mainHouseSqft / 1.25;
-    if (levels && (levels < 1 || levels > 4)) {
-      console.log(`⚠️ Invalid levels data (${levels}), using fallback: 1.25 stories, footprint = ${Math.round(houseFootprint)} sqft`);
-    } else {
-      console.log(`🏠 Using estimated levels for Add-On: 1.25 stories (fallback), footprint = ${Math.round(houseFootprint)} sqft`);
-    }
   }
 
   const availableSpace = lotAreaSqft - setbackArea - houseFootprint;
@@ -1344,12 +1244,9 @@ function calculateADUIncomeValue(subjectProperty, filteredComps, config, state =
   let twoBedRentZestimate = 0;
   const propertyState = String(state);
 
-  console.log(`🔍 ADU Rent Calculation: Starting (state: ${propertyState})`);
-
   // Try to find 2BR rent from subject property
   if (subjectProperty.rentZestimate && subjectProperty.bedrooms === 2) {
     twoBedRentZestimate = subjectProperty.rentZestimate;
-    console.log(`✅ Using subject property 2BR rentZestimate: $${twoBedRentZestimate}/mo`);
   } else {
     // Find 2BR rent from comps
     const twoBedComps = (filteredComps || []).filter(comp => comp.beds === 2);
@@ -1363,12 +1260,10 @@ function calculateADUIncomeValue(subjectProperty, filteredComps, config, state =
       const rentRate = (propertyState === 'CA' || propertyState === 'California') ? 0.005 : 0.01;
       const rentRatePercent = (propertyState === 'CA' || propertyState === 'California') ? '0.5%' : '1%';
       twoBedRentZestimate = round(avgTwoBedPrice * rentRate);
-      console.log(`✅ Using ${rentRatePercent} rule fallback for ${propertyState}: $${twoBedRentZestimate}/mo (from avg price $${round(avgTwoBedPrice)})`);
     }
   }
 
   if (twoBedRentZestimate <= 0) {
-    console.log(`⚠️ Could not find 2BR rent data for ADU calculation`);
     return -1; // Signal to use fallback premium
   }
 
@@ -1386,8 +1281,6 @@ function calculateADUIncomeValue(subjectProperty, filteredComps, config, state =
       expenseRatio: 0.25 // Lower than typical rental (ADU maintenance)
     }
   });
-
-  console.log(`✅ ADU Income Value: 2BR rent $${twoBedRentZestimate}/mo → ADU $${result.aduMonthlyRent}/mo → NOI $${result.aduNOIAnnual}/yr → Value $${result.aduIncomeValue}`);
 
   return result.aduIncomeValue;
 }
@@ -1484,7 +1377,6 @@ function estimateADUMarketRent(subjectProperty, filteredComps) {
 
       if (validRentEstimates >= 1) { // Loosened from requiring 2 comps to 1
         const avgEstimatedRent = round(totalEstimatedRent / validRentEstimates);
-        console.log(`✅ ADU rent from subject ratio: $${avgEstimatedRent}/mo from ${validRentEstimates} 2BR comps`);
         return avgEstimatedRent;
       }
     }
@@ -1496,7 +1388,6 @@ function estimateADUMarketRent(subjectProperty, filteredComps) {
     const aduRent = round(750 * subjectRentPerSqft * 0.85); // 15% discount for ADU vs main house
 
     if (aduRent >= 500 && aduRent <= 10000) { // Loosened range
-      console.log(`✅ ADU rent from subject sqft ratio: $${aduRent}/mo (750 sqft @ $${subjectRentPerSqft.toFixed(2)}/sqft × 85%)`);
       return aduRent;
     }
   }
@@ -1512,7 +1403,6 @@ function estimateADUMarketRent(subjectProperty, filteredComps) {
     else if (propertyValue >= 500000) estimatedAduRent = 1800; // Lower-mid areas
     else estimatedAduRent = 1400; // Budget areas
 
-    console.log(`⚠️ ADU rent from regional estimate: $${estimatedAduRent}/mo based on $${propertyValue} property value`);
     return estimatedAduRent;
   }
 
@@ -1528,7 +1418,6 @@ function calculateMarketGRM(subjectProperty, filteredComps) {
 
     // Validate GRM is reasonable (expanded range for current market conditions)
     if (subjectGRM >= 5 && subjectGRM <= 300) { // Expanded range to accommodate varying rent data quality
-      console.log(`✅ Using subject property GRM: ${subjectGRM} (price: $${propertyPrice}, rent: $${monthlyRent})`);
       return subjectGRM;
     }
   }
@@ -1543,7 +1432,6 @@ function calculateMarketGRM(subjectProperty, filteredComps) {
   else if (propertyValue >= 500000) marketGRM = 11;
   else marketGRM = 10; // Lower-value areas (higher yields)
 
-  console.log(`⚠️ Using market GRM estimate: ${marketGRM} based on property value`);
   return marketGRM;
 }
 

@@ -1199,9 +1199,13 @@ exports.scanDealsDaily = onSchedule({
 
         for (let i = 0; i < props.length; i++) {
           try {
+            // Skip Redfin API calls in scanner (rate limits cause timeouts)
+            // Use zestimate-based ARV instead — Redfin comps used in app UI only
             const results = await processProperty(props[i], {
               ...userCalcParams,
               minReturn: cfg.minReturn || userCalcParams.minReturn || 25000,
+              redfinSoldComps: [],
+              redfinForSaleComps: [],
             }, totalPropsScanned - props.length + i + 1, totalPropsScanned);
 
             for (const r of results) {
@@ -1425,6 +1429,8 @@ exports.triggerDealScan = onCall({
             const results = await processProperty(prop, {
               ...userCalcParams,
               minReturn: cfg.minReturn || userCalcParams.minReturn || 25000,
+              redfinSoldComps: [],
+              redfinForSaleComps: [],
             }, 1, props.length);
             allDeals.push(...results.filter((r) => r && r.netROI >= (cfg.minROI || 0.15)));
           } catch (err) {

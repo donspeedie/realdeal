@@ -16,13 +16,7 @@ async function fetchRedfinDataWithCache(endpoint, config, maxRetries = 3) {
   async function realFetch() {
     let retries = 0;
 
-    console.log("🌐 Redfin API call:", {
-      endpoint: endpoint,
-      url: BASE_URLS[endpoint],
-      params: config,
-      hasApiKey: !!process.env.RAPID_API_KEY,
-      cacheKey: docId
-    });
+    // Redfin API: ${endpoint}
 
     while (retries <= maxRetries) {
       try {
@@ -38,27 +32,14 @@ async function fetchRedfinDataWithCache(endpoint, config, maxRetries = 3) {
           timeout: 15000,
         });
 
-        console.log("✅ Redfin API success:", {
-          status: response.status,
-          dataKeys: Object.keys(response.data || {}),
-          dataType: typeof response.data,
-          hasData: !!response.data,
-          dataLength: JSON.stringify(response.data).length
-        });
+        // Redfin success: ${endpoint}
         return {
           status: response.status,
           data: response.data,
         // headers: response.headers, // <-- remove or sanitize if needed
         };
       } catch (err) {
-        console.log("❌ Redfin API error:", {
-          message: err.message,
-          status: err.response?.status,
-          statusText: err.response?.statusText,
-          responseData: err.response?.data,
-          retryAttempt: retries,
-          maxRetries: maxRetries
-        });
+        // Redfin error: ${err.response?.status || err.message}
 
         if (err.response?.status === 429) {
           await new Promise((r) => setTimeout(r, 2000 + retries * 1000));

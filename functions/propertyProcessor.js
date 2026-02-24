@@ -61,11 +61,11 @@ async function processProperty(prop, params, sequence, total) {
     // Using provided Redfin comps from params
     [zestimateRes, propertyDetailsRes] = await Promise.all([
       fetchZillowDataWithCache("zestimate", { zpid }).catch((err) => {
-        console.log("❌ Zillow zestimate error:", err.message);
+        // Zillow zestimate error: ${err.message}
         return { data: {} };
       }),
       fetchZillowDataWithCache("propertyDetails", { zpid }).catch((err) => {
-        console.log("❌ Zillow property details error:", err.message);
+        // Zillow details error: ${err.message}
         return { data: {} };
       })
     ]);
@@ -73,51 +73,31 @@ async function processProperty(prop, params, sequence, total) {
     // Fetching Redfin comps from API
     [zestimateRes, propertyDetailsRes, soldRedfinRes, forSaleRedfinRes] = await Promise.all([
       fetchZillowDataWithCache("zestimate", { zpid }).catch((err) => {
-        console.log("❌ Zillow zestimate error:", err.message);
+        // Zillow zestimate error: ${err.message}
         return { data: {} };
       }),
       fetchZillowDataWithCache("propertyDetails", { zpid }).catch((err) => {
-        console.log("❌ Zillow property details error:", err.message);
+        // Zillow details error: ${err.message}
         return { data: {} };
       }),
       fetchRedfinDataWithCache("searchSold", soldParams).catch((err) => {
-        console.log("❌ Redfin sold search error:", err.message);
+        // Redfin sold error: ${err.message}
         return { data: {} };
       }),
       fetchRedfinDataWithCache("searchForSale", forSaleParams).catch((err) => {
-        console.log("❌ Redfin for-sale search error:", err.message);
+        // Redfin for-sale error: ${err.message}
         return { data: {} };
       }),
     ]);
 
-    console.log("🔍 SOLD REDFIN RESPONSE:", JSON.stringify(soldRedfinRes, null, 2));
-    console.log("🏠 FOR SALE REDFIN RESPONSE:", JSON.stringify(forSaleRedfinRes, null, 2));
-
-    // Debug the data extraction
-    console.log("📊 Sold data path check:", {
-      hasData: !!soldRedfinRes.data,
-      hasDataData: !!soldRedfinRes.data?.data,
-      hasHomes: !!soldRedfinRes.data?.data?.homes,
-      homesLength: soldRedfinRes.data?.data?.homes?.length || 0
-    });
-
-    console.log("🏡 For sale data path check:", {
-      hasData: !!forSaleRedfinRes.data,
-      hasDataData: !!forSaleRedfinRes.data?.data,
-      hasHomes: !!forSaleRedfinRes.data?.data?.homes,
-      homesLength: forSaleRedfinRes.data?.data?.homes?.length || 0
-    });
+    // Redfin data available silently
   }
 
   const zestimate = Math.round(zestimateRes.data?.value || 0);
   const recentSold = Array.isArray(params.redfinSoldComps) ? params.redfinSoldComps : Array.isArray(soldRedfinRes.data?.data?.homes) ? soldRedfinRes.data.data.homes : [];
   const forSaleHomes = Array.isArray(params.redfinForSaleComps) ? params.redfinForSaleComps : Array.isArray(forSaleRedfinRes.data?.data?.homes) ? forSaleRedfinRes.data.data.homes : [];
 
-  console.log("📋 Final arrays:", {
-    recentSoldCount: recentSold.length,
-    forSaleHomesCount: forSaleHomes.length,
-    sampleForSaleHome: forSaleHomes[0] || "No for-sale homes found"
-  });
+  // recentSold: ${recentSold.length}, forSaleHomes: ${forSaleHomes.length}
 
   // Filter out condos, apartments, mobile homes, townhomes, and multi-family properties based on description
   const description = (propertyDetailsRes.data?.description || "").toLowerCase();
@@ -277,29 +257,16 @@ async function processProperty(prop, params, sequence, total) {
 
   if (matchedProperty) {
     subjectLevels = extractLevels(matchedProperty);
-    console.log("✅ Found subject property in Redfin data:", {
-      address: matchedProperty.address,
-      levels: subjectLevels,
-      sqft: extractCompSqft(matchedProperty),
-      beds: matchedProperty.beds,
-      lotSize: extractLotSize(matchedProperty)
-    });
+    // Found subject in Redfin data
   } else {
-    console.warn("[PropertyProcessor] Subject property not found in Redfin results - using fallback level assumptions");
-    console.log("   Search criteria:", {
-      address: subjectAddress.substring(0, 50),
-      sqft: subjectSqft,
-      beds: subjectBeds,
-      price: subjectPrice,
-      availableHomes: allRedfinHomes.length
-    });
+    // Subject not in Redfin results - using fallback level assumptions
   }
 
   // --- Enhanced avg price/sqft from comps (with multi-layered outlier filtering) ---
   let pricePerSqFt = 250;
   const subjectPricePerSqft = prop.price && prop.livingArea ? prop.price / prop.livingArea : 0;
 
-  console.log(`🔍 Comp filtering for ${prop.zpid}: subject price=$${subjectPrice}, sqft=${prop.livingArea}, price/sqft=$${Math.round(subjectPricePerSqft)}`);
+  // Comp filtering: zpid=${prop.zpid} price=$${subjectPrice} sqft=${prop.livingArea}
 
   const qualityValidatedComps = recentSold.filter((c) => {
     const price = extractCompPrice(c);
@@ -475,22 +442,15 @@ async function processProperty(prop, params, sequence, total) {
     }
   }).filter((result) => result !== null);
 
-  console.log(`📊 Results summary for ${prop.zpid}:`, {
-    totalStrategiesRun: strategies.length,
-    validResults: results.length,
-    resultMethods: results.map(r => r.method || r.error),
-    hasResults: results.length > 0
-  });
+  // Results: ${results.length}/${strategies.length} strategies for zpid ${prop.zpid}
 
   // Sanitize all results for FlutterFlow
   const sanitizedResults = results.map((result) => sanitizeForFlutterFlow(result));
 
   // Single-row mode
   if (params.strategy) {
-    console.log(`🎯 Single-row mode requested: ${params.strategy} for ${prop.zpid}`);
     const chosen = sanitizedResults.find((result) => result.method === params.strategy);
     if (!chosen) {
-      console.log(`❌ Strategy ${params.strategy} NOT FOUND for ${prop.zpid} - available: ${sanitizedResults.map(r => r.method).join(', ')}`);
       return [{
         error: `Strategy "${params.strategy}" not available for this property`,
         zpid,
@@ -498,13 +458,9 @@ async function processProperty(prop, params, sequence, total) {
         total,
       }];
     }
-    console.log(`✅ Returning single strategy ${params.strategy} for ${prop.zpid}`);
     return [chosen];
   } else {
-    console.log(`📦 Returning ${sanitizedResults.length} results for ${prop.zpid}`);
-    if (sanitizedResults.length === 0) {
-      console.log(`⚠️ WARNING: Empty results array for ${prop.zpid} - this will cause blank screen in frontend`);
-    }
+    // Returning ${sanitizedResults.length} results for ${prop.zpid}
     return sanitizedResults;
     // return sanitizedResults.length > 0 ? sanitizedResults : [{
     //   error: "No valid strategies found for this property",
