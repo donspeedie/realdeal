@@ -1484,7 +1484,7 @@ exports.processMailQueue = onDocumentCreated({
     return;
   }
 
-  const from = mailData.from || "donspeedie@gmail.com";
+  const from = mailData.from || "admin@fluidcm.com";
 
   try {
     const msg = {to, from};
