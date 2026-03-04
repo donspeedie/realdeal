@@ -17,18 +17,18 @@ async function testYearFilter() {
   };
 
   // Mock the property details response for 2010
-  const originalFetchZillow = require("./zillowApi").fetchZillowDataWithCache;
-  const originalFetchRedfin = require("./redfinApi").fetchRedfinDataWithCache;
+  const originalFetchZillow = require("./oaDataApi").fetchZillowDataWithCache;
+  const originalFetchRedfin = require("./oaDataApi").fetchRedfinDataWithCache;
 
   // Mock responses
-  require("./zillowApi").fetchZillowDataWithCache = async (endpoint, params) => {
+  require("./oaDataApi").fetchZillowDataWithCache = async (endpoint, params) => {
     if (endpoint === "propertyDetails") {
       return { data: { yearBuilt: 2010, description: "Great house" } };
     }
     return { data: { value: 450000 } };
   };
 
-  require("./redfinApi").fetchRedfinDataWithCache = async (endpoint, params) => {
+  require("./oaDataApi").fetchRedfinDataWithCache = async (endpoint, params) => {
     return { data: { data: { homes: [] } } };
   };
 
@@ -47,7 +47,7 @@ async function testYearFilter() {
   console.log("\n🏠 TEST 2: Property built in 2015 (should be FILTERED OUT)");
 
   // Mock for 2015 property
-  require("./zillowApi").fetchZillowDataWithCache = async (endpoint, params) => {
+  require("./oaDataApi").fetchZillowDataWithCache = async (endpoint, params) => {
     if (endpoint === "propertyDetails") {
       return { data: { yearBuilt: 2015, description: "New construction" } };
     }
@@ -78,7 +78,7 @@ async function testYearFilter() {
   console.log("\n🏠 TEST 3: Property with no year data (should be INCLUDED)");
 
   // Mock for property with no year data
-  require("./zillowApi").fetchZillowDataWithCache = async (endpoint, params) => {
+  require("./oaDataApi").fetchZillowDataWithCache = async (endpoint, params) => {
     if (endpoint === "propertyDetails") {
       return { data: { description: "Unknown year" } }; // No yearBuilt field
     }
@@ -105,8 +105,8 @@ async function testYearFilter() {
   }
 
   // Restore original functions
-  require("./zillowApi").fetchZillowDataWithCache = originalFetchZillow;
-  require("./redfinApi").fetchRedfinDataWithCache = originalFetchRedfin;
+  require("./oaDataApi").fetchZillowDataWithCache = originalFetchZillow;
+  require("./oaDataApi").fetchRedfinDataWithCache = originalFetchRedfin;
 
   console.log("\n📋 SUMMARY:");
   console.log("✅ Properties built in 2011 or earlier: INCLUDED");

@@ -9,13 +9,13 @@ admin.initializeApp({
 });
 const db = admin.firestore();
 
-if (!process.env.RAPID_API_KEY) {
-  console.error("RAPID_API_KEY env var required. Run with:");
-  console.error("  RAPID_API_KEY=<key> node trigger-scan.js");
+if (!process.env.OA_DATA_API_URL) {
+  console.error("OA_DATA_API_URL env var required. Run with:");
+  console.error("  OA_DATA_API_URL=http://localhost:8010 node trigger-scan.js");
   process.exit(1);
 }
 
-const {fetchZillowDataWithCache} = require("./zillowApi");
+const {fetchZillowDataWithCache} = require("./oaDataApi");
 const {processProperty} = require("./propertyProcessor");
 const {scoreDeal, mapStrategyResultToDeal} = require("./dealScoringEngine");
 

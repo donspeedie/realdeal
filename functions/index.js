@@ -7,15 +7,16 @@ const {defineSecret} = require("firebase-functions/params");
 const admin = require("firebase-admin");
 
 // Secrets managed via Firebase Secret Manager (not functions.config)
-// Set with: firebase functions:secrets:set RAPID_API_KEY
-const rapidApiKey = defineSecret("RAPID_API_KEY");
+// Set with: firebase functions:secrets:set OA_DATA_API_URL
+const oaDataApiUrl = defineSecret("OA_DATA_API_URL");
 const hubspotApiKey = defineSecret("HUBSPOT_API_KEY");
 const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
 const {initSSE} = require("./sseWriter");
-const {fetchZillowDataWithCache} = require("./zillowApi");
+const {fetchZillowDataWithCache} = require("./oaDataApi");
 const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
 const {scoreDeal, mapStrategyResultToDeal} = require("./dealScoringEngine");
+const {createFluidCMProject} = require("./fluidcmHandoff");
 
 if (admin.apps.length === 0) admin.initializeApp();
 
@@ -25,7 +26,7 @@ exports.autoRecalculateSavedPropertyV2 = onDocumentUpdated({
   memory: "512MiB",
   timeoutSeconds: 540,
   concurrency: 10,
-  secrets: [rapidApiKey],
+  secrets: [oaDataApiUrl],
 }, async (event) => {
   const before = event.data.before.data();
   const after = event.data.after.data();
@@ -188,7 +189,7 @@ setGlobalOptions({
 });
 
 // Non-streaming endpoint for FlutterFlow compatibility
-exports.cloudCalcsSync = onRequest({secrets: [rapidApiKey]}, async (req, res) => {
+exports.cloudCalcsSync = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
   res.set({
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -281,7 +282,7 @@ exports.testSimple = onRequest(async (req, res) => {
   });
 });
 
-exports.cloudCalcs = onRequest({secrets: [rapidApiKey]}, async (req, res) => {
+exports.cloudCalcs = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
   const requestId = Math.random().toString(36).substr(2, 9);
   console.log(`\n🚀 REQUEST ${requestId} STARTED`);
   console.log(`📋 Method: ${req.method}`);
@@ -1127,7 +1128,7 @@ exports.scanDealsDaily = onSchedule({
   region: "us-west1",
   memory: "2GiB",
   timeoutSeconds: 540,
-  secrets: [rapidApiKey],
+  secrets: [oaDataApiUrl],
 }, async (event) => {
   console.log("[DealScanner] Starting daily scan...");
   const db = admin.firestore();
@@ -1371,7 +1372,7 @@ exports.triggerDealScan = onCall({
   region: "us-west1",
   memory: "2GiB",
   timeoutSeconds: 540,
-  secrets: [rapidApiKey],
+  secrets: [oaDataApiUrl],
 }, async (request) => {
   if (!request.auth) {
     throw new Error("Authentication required");
@@ -1530,4 +1531,103 @@ exports.processMailQueue = onDocumentCreated({
       },
     });
   }
+});
+
+/**
+ * Update deal alert pipeline status with transition validation.
+ *
+ * Valid transitions:
+ *   opportunity → reviewing
+ *   reviewing   → go | pass
+ *   pass        → opportunity  (reopen)
+ */
+const VALID_TRANSITIONS = {
+  opportunity: ["reviewing"],
+  reviewing: ["go", "pass"],
+  pass: ["opportunity"],
+};
+
+exports.updateDealStatus = onCall({
+  region: "us-west1",
+}, async (request) => {
+  if (!request.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "Must be authenticated to update deal status",
+    );
+  }
+
+  const {dealId, newStatus} = request.data;
+  if (!dealId || !newStatus) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "dealId and newStatus are required",
+    );
+  }
+
+  const db = admin.firestore();
+  const docRef = db.collection("dealAlerts").doc(dealId);
+  const doc = await docRef.get();
+
+  if (!doc.exists) {
+    throw new functions.https.HttpsError(
+      "not-found",
+      `Deal alert ${dealId} not found`,
+    );
+  }
+
+  const currentStatus = doc.data().status || "opportunity";
+  const allowed = VALID_TRANSITIONS[currentStatus];
+
+  if (!allowed || !allowed.includes(newStatus)) {
+    throw new functions.https.HttpsError(
+      "failed-precondition",
+      `Cannot transition from "${currentStatus}" to "${newStatus}". ` +
+      `Allowed: ${(allowed || []).join(", ") || "none"}`,
+    );
+  }
+
+  const updateData = {
+    status: newStatus,
+    statusUpdatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    statusUpdatedBy: request.auth.uid,
+  };
+
+  // On GO: record approval metadata
+  if (newStatus === "go") {
+    updateData.approvedAt = admin.firestore.FieldValue.serverTimestamp();
+    updateData.approvedBy = request.auth.uid;
+  }
+
+  await docRef.update(updateData);
+
+  console.log(
+    `[DealStatus] ${dealId}: ${currentStatus} → ${newStatus} by ${request.auth.uid}`,
+  );
+
+  // On GO: create FluidCM project for deal handoff
+  if (newStatus === "go") {
+    try {
+      const dealData = doc.data();
+      const result = await createFluidCMProject(dealData, dealId);
+      if (result && result.projectId) {
+        await docRef.update({
+          fluidcm_project_id: result.projectId,
+          fluidcm_project_code: result.projectCode,
+          fluidcm_handoff_at: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        console.log(`[FluidCM] Project ${result.projectCode} created for deal ${dealId}`);
+      }
+    } catch (err) {
+      // Non-blocking: log but don't fail the status update
+      console.error(`[FluidCM] Handoff failed for deal ${dealId}:`, err.message);
+    }
+  }
+
+  return {
+    success: true,
+    dealId,
+    previousStatus: currentStatus,
+    newStatus,
+  };
 });

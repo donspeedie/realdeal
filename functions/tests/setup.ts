@@ -29,5 +29,5 @@ vi.mock('firebase-functions', () => ({
 
 // Setup environment variables
 beforeEach(() => {
-  process.env.RAPID_API_KEY = 'test-key';
+  process.env.OA_DATA_API_URL = 'http://localhost:8010';
 });

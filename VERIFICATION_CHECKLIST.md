@@ -1,7 +1,10 @@
 # RealDeal.ai - System Verification Checklist
 
 **Created:** 2026-02-05
+**Updated:** 2026-03-04 — RapidAPI fully removed. All property data now routes through OA Data API via `oaDataApi.js`.
 **Purpose:** Verify system integrity and document required setup steps
+
+> **NOTE:** RapidAPI references below are historical. `RAPID_API_KEY` has been replaced by `OA_DATA_API_URL`.
 
 ---
 
