@@ -14,5 +14,19 @@ service cloud.firestore {
       allow write: if resource.data.userRef == /databases/$(database)/documents/UserData/$(request.auth.uid);
       allow delete: if resource.data.userRef == /databases/$(database)/documents/UserData/$(request.auth.uid);
     }
+
+    match /dealAlerts/{document} {
+      // Authenticated users can read all deal alerts
+      allow read: if request.auth != null;
+
+      // Status updates only — restricted to pipeline fields
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'statusUpdatedAt', 'statusUpdatedBy']);
+
+      // No client-side create or delete — managed by server (bulk pipeline sync)
+      allow create: if false;
+      allow delete: if false;
+    }
   }
 }

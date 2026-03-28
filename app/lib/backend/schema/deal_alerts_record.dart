@@ -155,6 +155,36 @@ class DealAlertsRecord extends FirestoreRecord {
   double get lotAreaValue => _lotAreaValue ?? 0.0;
   bool hasLotAreaValue() => _lotAreaValue != null;
 
+  // "status" field — pipeline status: opportunity → reviewing → go | pass
+  String? _status;
+  String get status => _status ?? 'opportunity';
+  bool hasStatus() => _status != null;
+
+  // "statusUpdatedAt" field.
+  DateTime? _statusUpdatedAt;
+  DateTime? get statusUpdatedAt => _statusUpdatedAt;
+  bool hasStatusUpdatedAt() => _statusUpdatedAt != null;
+
+  // "enrichedAt" field.
+  DateTime? _enrichedAt;
+  DateTime? get enrichedAt => _enrichedAt;
+  bool hasEnrichedAt() => _enrichedAt != null;
+
+  // "score" field — lead score from bulk pipeline.
+  int? _score;
+  int get score => _score ?? 0;
+  bool hasScore() => _score != null;
+
+  // "recommendation" field — GO / PASS / REVIEW.
+  String? _recommendation;
+  String get recommendation => _recommendation ?? '';
+  bool hasRecommendation() => _recommendation != null;
+
+  // "score_tier" field — HOT / WARM / COOL / COLD.
+  String? _scoreTier;
+  String get scoreTier => _scoreTier ?? '';
+  bool hasScoreTier() => _scoreTier != null;
+
   void _initializeFields() {
     _address = snapshotData['address'] as String?;
     _zpid = snapshotData['zpid']?.toString();
@@ -184,6 +214,12 @@ class DealAlertsRecord extends FirestoreRecord {
     _mortgage = castToType<int>(snapshotData['mortgage']);
     _duration = castToType<int>(snapshotData['duration']);
     _lotAreaValue = castToType<double>(snapshotData['lotAreaValue']);
+    _status = snapshotData['status'] as String?;
+    _statusUpdatedAt = snapshotData['statusUpdatedAt'] as DateTime?;
+    _enrichedAt = snapshotData['enrichedAt'] as DateTime?;
+    _score = castToType<int>(snapshotData['score']);
+    _recommendation = snapshotData['recommendation'] as String?;
+    _scoreTier = snapshotData['score_tier'] as String?;
   }
 
   static CollectionReference get collection =>

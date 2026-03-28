@@ -1,5 +1,4 @@
-const { fetchZillowDataWithCache } = require("./zillowApi");
-const { fetchRedfinDataWithCache } = require("./redfinApi");
+const { fetchZillowDataWithCache, fetchRedfinDataWithCache, fetchMarketSignal, fetchDistressCheck } = require("./oaDataApi");
 const { calculateStrategy } = require("./strategyCalculator");
 const {
   analyzeDescription,
@@ -56,41 +55,34 @@ async function processProperty(prop, params, sequence, total) {
   let propertyDetailsRes = { data: {} };
   let soldRedfinRes = { data: {} };
   let forSaleRedfinRes = { data: {} };
+  let marketSignalRes = { signal: "yellow", composite_score: 50, recommendation: "" };
+  let distressRes = { has_distress: false, is_foreclosure: false, is_pre_foreclosure: false, has_tax_delinquency: false };
+
+  // Extract street address and city for OA address-based lookups
+  const streetAddress = prop.streetAddress || address.split(",")[0].trim();
+  const cityFromAddress = address.split(",").length > 1 ? address.split(",")[1].trim() : "";
+
+  // OA Data API config — uses address+city instead of zpid
+  const oaLookupConfig = { address: streetAddress, city: cityFromAddress, state: "CA" };
 
   if (params.redfinForSaleComps && Array.isArray(params.redfinForSaleComps) && params.redfinSoldComps && Array.isArray(params.redfinSoldComps)) {
     // Using provided Redfin comps from params
-    [zestimateRes, propertyDetailsRes] = await Promise.all([
-      fetchZillowDataWithCache("zestimate", { zpid }).catch((err) => {
-        // Zillow zestimate error: ${err.message}
-        return { data: {} };
-      }),
-      fetchZillowDataWithCache("propertyDetails", { zpid }).catch((err) => {
-        // Zillow details error: ${err.message}
-        return { data: {} };
-      })
+    [zestimateRes, propertyDetailsRes, marketSignalRes, distressRes] = await Promise.all([
+      fetchZillowDataWithCache("zestimate", oaLookupConfig).catch(() => ({ data: {} })),
+      fetchZillowDataWithCache("propertyDetails", oaLookupConfig).catch(() => ({ data: {} })),
+      fetchMarketSignal(pincode).catch(() => ({ signal: "yellow", composite_score: 50, recommendation: "" })),
+      fetchDistressCheck(streetAddress, cityFromAddress).catch(() => ({ has_distress: false, is_foreclosure: false, is_pre_foreclosure: false, has_tax_delinquency: false })),
     ]);
   } else {
-    // Fetching Redfin comps from API
-    [zestimateRes, propertyDetailsRes, soldRedfinRes, forSaleRedfinRes] = await Promise.all([
-      fetchZillowDataWithCache("zestimate", { zpid }).catch((err) => {
-        // Zillow zestimate error: ${err.message}
-        return { data: {} };
-      }),
-      fetchZillowDataWithCache("propertyDetails", { zpid }).catch((err) => {
-        // Zillow details error: ${err.message}
-        return { data: {} };
-      }),
-      fetchRedfinDataWithCache("searchSold", soldParams).catch((err) => {
-        // Redfin sold error: ${err.message}
-        return { data: {} };
-      }),
-      fetchRedfinDataWithCache("searchForSale", forSaleParams).catch((err) => {
-        // Redfin for-sale error: ${err.message}
-        return { data: {} };
-      }),
+    // Fetching comps + valuation from OA Data API
+    [zestimateRes, propertyDetailsRes, soldRedfinRes, forSaleRedfinRes, marketSignalRes, distressRes] = await Promise.all([
+      fetchZillowDataWithCache("zestimate", oaLookupConfig).catch(() => ({ data: {} })),
+      fetchZillowDataWithCache("propertyDetails", oaLookupConfig).catch(() => ({ data: {} })),
+      fetchRedfinDataWithCache("searchSold", soldParams).catch(() => ({ data: {} })),
+      fetchRedfinDataWithCache("searchForSale", forSaleParams).catch(() => ({ data: {} })),
+      fetchMarketSignal(pincode).catch(() => ({ signal: "yellow", composite_score: 50, recommendation: "" })),
+      fetchDistressCheck(streetAddress, cityFromAddress).catch(() => ({ has_distress: false, is_foreclosure: false, is_pre_foreclosure: false, has_tax_delinquency: false })),
     ]);
-
-    // Redfin data available silently
   }
 
   const zestimate = Math.round(zestimateRes.data?.value || 0);
@@ -430,6 +422,17 @@ async function processProperty(prop, params, sequence, total) {
           comp1LvgArea: extractCompSqft(p),
           latLong: p.latLong,
         })).slice(0, 10),
+        marketSignal: marketSignalRes.signal || "yellow",
+        marketScore: marketSignalRes.composite_score || 50,
+        marketRecommendation: marketSignalRes.recommendation || "",
+        distressFlags: {
+          hasDistress: distressRes.has_distress || false,
+          isForeclosure: distressRes.is_foreclosure || false,
+          isPreForeclosure: distressRes.is_pre_foreclosure || false,
+          hasTaxDelinquency: distressRes.has_tax_delinquency || false,
+          leadScore: distressRes.lead_score || null,
+          leadTier: distressRes.lead_tier || null,
+        },
       };
     } catch (e) {
       return {

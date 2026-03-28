@@ -19,7 +19,7 @@
     ]
   },
   "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
+    "rules": "app/firebase/firestore.rules",
+    "indexes": "app/firebase/firestore.indexes.json"
   }
 }

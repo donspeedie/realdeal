@@ -334,8 +334,12 @@ class _SearchWidgetState extends State<SearchWidget>
                     safeSetState(() {});
                   }
                 },
-                onError: (onErrorInput) async {},
-                onDone: () async {},
+                onError: (onErrorInput) async {
+                  safeSetState(() {});
+                },
+                onDone: () async {
+                  safeSetState(() {});
+                },
               );
               // Add the subscription to the active streaming response subscriptions
               // in API Manager so that it can be cancelled at a later time.
@@ -399,8 +403,12 @@ class _SearchWidgetState extends State<SearchWidget>
                     safeSetState(() {});
                   }
                 },
-                onError: (onErrorInput) async {},
-                onDone: () async {},
+                onError: (onErrorInput) async {
+                  safeSetState(() {});
+                },
+                onDone: () async {
+                  safeSetState(() {});
+                },
               );
               // Add the subscription to the active streaming response subscriptions
               // in API Manager so that it can be cancelled at a later time.

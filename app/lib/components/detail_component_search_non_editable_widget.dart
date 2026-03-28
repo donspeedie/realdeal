@@ -1,4 +1,6 @@
+import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
+import '/backend/api_requests/pipeline_api.dart';
 import '/components/budget_component_search_editable_widget.dart';
 import '/components/comp_card_redfin_widget.dart';
 import '/components/description_i_i_widget.dart';
@@ -863,6 +865,76 @@ class _DetailComponentSearchNonEditableWidgetState
                   },
                 );
               },
+            ),
+          ),
+          // Send to Pipeline button
+          Padding(
+            padding: const EdgeInsetsDirectional.fromSTEB(
+                16.0, 16.0, 16.0, 24.0),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48.0,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.send, size: 18.0),
+                label: const Text('Send to Pipeline'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD97706),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 14.0,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                onPressed: () async {
+                  try {
+                    final docId = widget.savedDocRef?.id ??
+                        '${currentUserUid}_${widget.zpid}';
+                    final result = await PipelineApi.sendToPipeline(
+                      realdealId: docId,
+                      address: widget.address ?? '',
+                      price: widget.price ?? 0,
+                      impValue: widget.impValue ?? 0,
+                      futureValue: widget.futValue,
+                      downPayment: widget.downPayment ?? widget.dwnPmt,
+                      loanFees: widget.loanFees,
+                      cashNeeded: widget.cashNeeded,
+                      duration: widget.duration,
+                      beds: widget.beds,
+                      baths: widget.baths,
+                      sqft: widget.lvgArea,
+                      strategy: widget.method,
+                    );
+                    if (context.mounted) {
+                      final score = result['total_score'] ?? 0;
+                      final rec = result['recommendation'] ?? 'UNKNOWN';
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'Sent to pipeline: Score $score ($rec)'),
+                          backgroundColor: rec == 'GO'
+                              ? Colors.green
+                              : rec == 'CAUTION'
+                                  ? Colors.orange
+                                  : Colors.red,
+                          duration: const Duration(seconds: 4),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Failed to send: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
             ),
           ),
         ],

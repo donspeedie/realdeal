@@ -4,69 +4,69 @@
 
 @layer base {
   :root {
-    /* Brand Colors - Real Deal Design System */
-    --primary: 216 53% 34%;           /* Metallic Blue #2E5984 */
-    --primary-glow: 195 100% 50%;     /* Neon Sky #00C8FF */
-    --accent: 195 100% 50%;           /* Neon Sky #00C8FF */
-    --highlight: 14 100% 60%;         /* Sunset Orange #FF6B35 */
-    --success: 162 100% 35%;          /* Growth Green #00B386 */
-    --warning: 0 76% 54%;             /* Market Red #E02F2F */
-    
+    /* Brand Colors - Matched to app.getrealdeal.ai */
+    --primary: 209 63% 30%;           /* Dark Blue #1D4F7D */
+    --primary-glow: 209 100% 58%;     /* Bright Blue #2797FF */
+    --accent: 209 100% 58%;           /* Bright Blue #2797FF */
+    --highlight: 69 72% 45%;          /* Yellow-Green #ACC420 */
+    --success: 139 63% 42%;           /* Green #27AE52 */
+    --warning: 0 83% 60%;             /* Red #EE4444 */
+
     /* UI Colors */
-    --background: 0 0% 100%;          /* Pure White */
-    --foreground: 225 39% 16%;        /* Midnight Ink #1A1F36 */
-    --card: 0 0% 100%;               
-    --card-foreground: 225 39% 16%;   
-    --popover: 0 0% 100%;            
-    --popover-foreground: 225 39% 16%;
-    --muted: 214 32% 91%;            /* Fog Gray #F5F7FA */
-    --muted-foreground: 215 16% 47%;  /* Cloud Steel #6B7280 */
-    --border: 214 32% 91%;           
-    --input: 214 32% 91%;            
-    --ring: 216 53% 34%;             /* Primary Blue */
+    --background: 0 0% 100%;          /* White */
+    --foreground: 214 24% 11%;        /* #161C24 */
+    --card: 0 0% 100%;
+    --card-foreground: 214 24% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 214 24% 11%;
+    --muted: 207 43% 96%;            /* Cool Gray #F0F5F9 */
+    --muted-foreground: 216 13% 45%;  /* #636F81 */
+    --border: 214 18% 89%;           /* #E0E3E7 */
+    --input: 214 18% 89%;
+    --ring: 209 63% 30%;             /* Primary Dark Blue */
     --radius: 0.5rem;
-    
+
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary-glow)));
     --gradient-accent: linear-gradient(135deg, hsl(var(--accent)), hsl(var(--highlight)));
     --gradient-hero: linear-gradient(180deg, hsl(var(--muted)), hsl(var(--background)));
-    
+
     /* Shadows */
     --shadow-primary: 0 10px 30px -10px hsl(var(--primary) / 0.3);
-    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.4);
+    --shadow-glow: 0 0 40px hsl(var(--primary-glow) / 0.3);
     --shadow-elegant: 0 20px 40px -20px hsl(var(--primary) / 0.2);
 
     /* Sidebar */
     --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 210 11% 15%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 210 11% 15%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-foreground: 214 24% 11%;
+    --sidebar-primary: 209 63% 30%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 207 43% 96%;
+    --sidebar-accent-foreground: 214 24% 11%;
+    --sidebar-border: 214 18% 89%;
+    --sidebar-ring: 209 100% 58%;
   }
 
   .dark {
-    --background: 225 39% 16%;        /* Midnight Ink */
-    --foreground: 0 0% 100%;          /* Pure White */
-    --card: 225 39% 16%;             
-    --card-foreground: 0 0% 100%;    
-    --popover: 225 39% 16%;          
-    --popover-foreground: 0 0% 100%; 
-    --muted: 215 16% 47%;            /* Cloud Steel */
-    --muted-foreground: 214 32% 91%; /* Fog Gray */
-    --border: 215 16% 47%;           
-    --input: 215 16% 47%;            
-    --ring: 195 100% 50%;            /* Neon Sky */
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 210 11% 15%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --background: 214 24% 11%;        /* #161C24 */
+    --foreground: 0 0% 100%;
+    --card: 214 24% 11%;
+    --card-foreground: 0 0% 100%;
+    --popover: 214 24% 11%;
+    --popover-foreground: 0 0% 100%;
+    --muted: 216 13% 45%;
+    --muted-foreground: 207 43% 96%;
+    --border: 216 13% 45%;
+    --input: 216 13% 45%;
+    --ring: 209 100% 58%;            /* Bright Blue */
+    --sidebar-background: 214 24% 11%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 209 100% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 210 11% 15%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 216 13% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 216 13% 20%;
+    --sidebar-ring: 209 100% 58%;
   }
 }
 

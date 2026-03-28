@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "habu-1gxak2"
-  }
+  },
+  "targets": {
+    "habu-1gxak2": {
+      "hosting": {
+        "app": [
+          "habu-1gxak2"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

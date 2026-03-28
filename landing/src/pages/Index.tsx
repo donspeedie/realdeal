@@ -27,7 +27,7 @@ const Index = () => {
       <header className="container mx-auto px-4 py-4 lg:py-8 relative">
         <div className="flex flex-col items-center space-y-2">
           <img src="/lovable-uploads/05aea857-8655-4de2-982c-bf16fd500ec9.png" alt="Real Deal Logo" className="h-6 sm:h-8 lg:h-12 w-auto" />
-          <p className="text-sm sm:text-base lg:text-lg font-montserrat font-semibold text-foreground tracking-wide uppercase">
+          <p className="text-sm sm:text-base lg:text-lg font-sans font-semibold text-foreground tracking-wide uppercase">
             Real Estate Deals <span className="shimmer-text">Revealed</span>
           </p>
         </div>
@@ -81,7 +81,7 @@ const Index = () => {
           <Card className="p-6 lg:p-10 bg-gradient-primary border-0 w-full lg:w-3/4 shadow-glow">
             <CardContent className="p-0">
               <div className="space-y-6 lg:space-y-8">
-                <h3 className="text-xl lg:text-3xl font-poppins font-bold text-white text-center uppercase tracking-tight">
+                <h3 className="text-xl lg:text-3xl font-sans font-bold text-white text-center uppercase tracking-tight">
                   Ready to Find Your Next Deal?
                 </h3>
                 <div className="flex justify-center">
@@ -103,11 +103,11 @@ const Index = () => {
               <img src="/lovable-uploads/78eb1237-ca68-4e3f-83fe-c87299ddf807.png" alt="Donald Speedie" className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <p className="text-lg lg:text-2xl font-poppins font-bold text-highlight mb-3 lg:mb-4">Love it!</p>
+              <p className="text-lg lg:text-2xl font-sans font-bold text-highlight mb-3 lg:mb-4">Love it!</p>
               <p className="text-base lg:text-xl leading-relaxed font-inter text-foreground mb-4 lg:mb-6">
                 "Real Deal is so new, we don't even have any other testimonies yet. But we built this tool for ourselves and love the speed and ease that this it brings to the process, saving us hours on each deal. Built by a builder."
               </p>
-              <p className="text-sm lg:text-lg text-muted-foreground font-poppins font-semibold">
+              <p className="text-sm lg:text-lg text-muted-foreground font-sans font-semibold">
                 Donald Speedie, Nimble Development LLC
               </p>
             </div>
@@ -123,7 +123,7 @@ const Index = () => {
               <img src="/lovable-uploads/5c80c350-9c77-47d4-80fa-f714baffd319.png" alt="Example property listing with investment details" className="w-full max-w-sm lg:max-w-xl rounded-2xl shadow-elegant transform scale-100 lg:scale-105" />
             </div>
             <div className="space-y-6 lg:space-y-8 p-6 lg:p-10 bg-gradient-accent rounded-2xl shadow-glow">
-              <h3 className="text-xl lg:text-3xl font-poppins font-bold text-white uppercase tracking-tight text-center lg:text-left">
+              <h3 className="text-xl lg:text-3xl font-sans font-bold text-white uppercase tracking-tight text-center lg:text-left">
                 What kind of investor are you?
               </h3>
               <div className="space-y-4 lg:space-y-6 text-white">
@@ -133,7 +133,7 @@ const Index = () => {
                 <p className="text-base lg:text-xl font-inter leading-relaxed">
                   Don't mind rolling up your sleeves? Value-Add potential is revealed — across flips, ADUs, add-ons, and scrapes as well — without wasting your time.
                 </p>
-                <p className="font-poppins font-bold text-lg lg:text-2xl">
+                <p className="font-sans font-bold text-lg lg:text-2xl">
                   No more guesswork. No more analysis paralysis.
                 </p>
               </div>
@@ -149,7 +149,7 @@ const Index = () => {
           <div className="flex flex-col sm:flex-row items-start gap-4 lg:gap-6 p-6 lg:p-10 bg-gradient-primary rounded-2xl max-w-4xl shadow-glow">
             <Coins className="w-8 h-8 lg:w-12 lg:h-12 text-white flex-shrink-0 mt-1 lg:mt-2 mx-auto sm:mx-0" />
             <p className="text-lg lg:text-xl font-inter leading-relaxed text-white text-center sm:text-left">
-              <strong className="font-poppins font-bold text-xl lg:text-2xl">Only pay for what you use.</strong> See a deal that you like? Use tokens to gain access to the details of a deal. No more expensive, unused subscriptions to pay for. Get started today with 3 free deals.
+              <strong className="font-sans font-bold text-xl lg:text-2xl">Only pay for what you use.</strong> See a deal that you like? Use tokens to gain access to the details of a deal. No more expensive, unused subscriptions to pay for. Get started today with 3 free deals.
             </p>
           </div>
         </div>
@@ -171,7 +171,7 @@ const Index = () => {
                   <ArrowRight className="absolute w-24 h-24 lg:w-36 lg:h-36 text-warning animate-[slide-right_2s_ease-in-out_infinite_1.2s]" />
                 </>}
             </div>
-            <p className="text-base lg:text-lg font-poppins font-bold text-foreground text-center">
+            <p className="text-base lg:text-lg font-sans font-bold text-foreground text-center">
               Turns endless listings into a shortlist of viable opportunities in seconds.
             </p>
           </div>
@@ -201,7 +201,7 @@ const Index = () => {
           <div className="flex justify-center mb-12 lg:mb-20">
             <div className="w-full max-w-4xl space-y-6 lg:space-y-8 text-center">
               <img src="/lovable-uploads/404363b2-e447-4717-8003-532f695be474.png" alt="Property comparables showing market analysis" className="w-full lg:w-1/2 h-auto rounded-2xl shadow-elegant transform scale-100 lg:scale-105 mx-auto" />
-              <p className="text-lg lg:text-2xl font-poppins font-bold text-foreground px-4">
+              <p className="text-lg lg:text-2xl font-sans font-bold text-foreground px-4">
                 Analyze comps onscreen to fine tune your ARV (After Repair Value).
               </p>
             </div>
