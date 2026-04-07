@@ -17,6 +17,7 @@ const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
 const {scoreDeal, mapStrategyResultToDeal} = require("./dealScoringEngine");
 const {createFluidCMProject} = require("./fluidcmHandoff");
+const {initContractorProfile, updateContractorProfile, completeOnboarding} = require("./contractorOnboarding");
 
 if (admin.apps.length === 0) admin.initializeApp();
 
@@ -1630,4 +1631,42 @@ exports.updateDealStatus = onCall({
     previousStatus: currentStatus,
     newStatus,
   };
+});
+
+// ── Contractor Onboarding ──────────────────────────────────────────────────
+
+/**
+ * Initialize a blank contractor profile for onboarding.
+ * POST { email, displayName? }
+ */
+exports.contractorInit = onRequest({
+  region: "us-west1",
+  cors: true,
+}, async (req, res) => {
+  if (req.method !== "POST") return res.status(405).json({error: "POST only"});
+  return initContractorProfile(req, res);
+});
+
+/**
+ * Update a contractor profile during the onboarding interview.
+ * POST { contractorId, updates: {...}, transcript?: { role, message } }
+ */
+exports.contractorUpdate = onRequest({
+  region: "us-west1",
+  cors: true,
+}, async (req, res) => {
+  if (req.method !== "POST") return res.status(405).json({error: "POST only"});
+  return updateContractorProfile(req, res);
+});
+
+/**
+ * Complete the onboarding process and create FluidCM contractor record.
+ * POST { contractorId, interviewNotes? }
+ */
+exports.contractorComplete = onRequest({
+  region: "us-west1",
+  cors: true,
+}, async (req, res) => {
+  if (req.method !== "POST") return res.status(405).json({error: "POST only"});
+  return completeOnboarding(req, res);
 });
