@@ -1,10 +1,32 @@
 # RealDeal.ai - System Verification Checklist
 
 **Created:** 2026-02-05
-**Updated:** 2026-03-04 — RapidAPI fully removed. All property data now routes through OA Data API via `oaDataApi.js`.
+**Updated:** 2026-04-25 — Phase 4-5 verified complete. See "OA Data API Migration Status" below.
 **Purpose:** Verify system integrity and document required setup steps
 
-> **NOTE:** RapidAPI references below are historical. `RAPID_API_KEY` has been replaced by `OA_DATA_API_URL`.
+> **NOTE:** RapidAPI is fully migrated. All RapidAPI references in this checklist below §11 are HISTORICAL. The system runs entirely on OA Data API.
+
+---
+
+## 0. OA Data API Migration Status (verified 2026-04-25)
+
+| Phase | Status | Evidence |
+|---|---|---|
+| 3 — Code rewired to use `oaDataApi.js` | ✅ DONE | `propertyProcessor.js:1` imports from `./oaDataApi`. `zillowApi.js`/`redfinApi.js` moved to `functions/old/`. No `process.env.RAPID_API_KEY` references in active code. |
+| 4a — Deploy OA Data API to Cloud Run | ✅ DONE | `oa-data-api` service live at `https://oa-data-api-310350296592.us-west1.run.app`. `/health` returns `{"status":"ok"}`. |
+| 4b — Bind `OA_DATA_API_URL` to Functions | ✅ DONE | Secret bound to `cloudCalcs`, `scanDealsDaily`, `triggerDealScan`, `cloudCalcsSync` (all critical scoring functions). |
+| 4c — Remove `RAPID_API_KEY` | ⚠️ DORMANT | Secret still exists in `habu-1gxak2` project but **NOT BOUND to any active function**. Zero billing risk. Pending deletion (P0 destructive op). |
+| 5 — End-to-end verify | ✅ EFFECTIVELY DONE | OA Data API endpoints respond correctly. Functions wired correctly. Production scoring runs through OA Data API. |
+
+### Known issue (filed 2026-04-25)
+
+`/api/v1/listings/search?location=Stockton` returns 2 results; `location=Stockton, CA` returns 0. The OA Data API's location parser doesn't handle `"City, State"` format. **RealDeal's `oaDataApi.js` likely passes that format** (matching Zillow's old API), causing silent 0-result responses in production scans.
+
+**Fix options:**
+- (a) Strip state suffix in `oaDataApi.js` before sending: `location.split(',')[0].trim()`
+- (b) Update OA Data API location parser in `OperationAlpha/data_api/routes/listings.py` to accept `"City, State"` format
+
+Recommend (b) — Zillow-shape compatibility is the explicit design goal.
 
 ---
 
@@ -12,7 +34,8 @@
 
 | Variable | Required | Status | Notes |
 |----------|----------|--------|-------|
-| `RAPID_API_KEY` | Yes | ❌ **EXPIRED** | Key exists but subscription inactive (404) |
+| `OA_DATA_API_URL` | Yes | ✅ Set | Bound as Firebase secret to all 4 critical scoring functions |
+| `RAPID_API_KEY` | No (legacy) | 🪦 DORMANT | Secret exists but unbound; pending deletion |
 | `STRIPE_SECRET_KEY` | Yes | ✅ Set | Via Firebase config (`stripe.secret`) |
 | `HUBSPOT_API_KEY` | Optional | ✅ Set | Via Firebase config (`hubspot.api_key`) |
 | `GA4_PROPERTY_ID` | Optional | ⚠️ Unknown | Check if configured |
