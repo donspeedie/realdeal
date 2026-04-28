@@ -5,6 +5,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Check, Coins, ArrowRight, ArrowDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { EcosystemStrip } from '@/components/EcosystemStrip';
+import { Footer } from '@/components/Footer';
 const Index = () => {
   const [email, setEmail] = useState('');
   const isMobile = useIsMobile();
@@ -25,6 +27,14 @@ const Index = () => {
   return <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="container mx-auto px-4 py-4 lg:py-8 relative">
+        <a
+          href="https://nimble-development.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute top-4 lg:top-8 left-4 text-xs lg:text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          by Nimble Development
+        </a>
         <div className="flex flex-col items-center space-y-2">
           <img src="/lovable-uploads/05aea857-8655-4de2-982c-bf16fd500ec9.png" alt="Real Deal Logo" className="h-6 sm:h-8 lg:h-12 w-auto" />
           <p className="text-sm sm:text-base lg:text-lg font-sans font-semibold text-foreground tracking-wide uppercase">
@@ -109,6 +119,9 @@ const Index = () => {
               </p>
               <p className="text-sm lg:text-lg text-muted-foreground font-sans font-semibold">
                 Donald Speedie, Nimble Development LLC
+              </p>
+              <p className="text-sm lg:text-base text-muted-foreground font-inter italic mt-3 lg:mt-4">
+                Same team, different angle: <a href="https://fluidcm.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">FluidCM</a> manages what gets built. Real Deal finds what&apos;s worth building.
               </p>
             </div>
           </div>
@@ -209,18 +222,11 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Settings Section */}
-      
+      {/* Ecosystem strip */}
+      <EcosystemStrip current="realdeal" heading="Same team. Different angles." />
 
       {/* Footer */}
-      <footer className="container mx-auto px-4 py-8 lg:py-16">
-        <div className="text-center text-muted-foreground space-y-4">
-          <p className="text-sm lg:text-base font-inter max-w-3xl mx-auto">
-            getRealDeal.ai provides tools for analyzing real estate investments such as calculators and estimates. We make no guarantees as to the accuracy of the information provided. User is required to verify all amounts and calculations before relying on this information.
-          </p>
-          <p className="text-lg lg:text-xl font-inter">&copy; 2024 Real Deal. All rights reserved.</p>
-        </div>
-      </footer>
+      <Footer />
     </div>;
 };
 export default Index;
