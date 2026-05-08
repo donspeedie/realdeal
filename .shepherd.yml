@@ -1,0 +1,24 @@
+# Shepherd autonomous-action policy for this repo.
+# Read by daemon/jobs/shepherd_sync.py from the default branch only.
+# https://github.com/donspeedie/OperationAlpha/blob/master/daemon/jobs/shepherd_sync.py
+
+# Trunk merges (master/main) — set true when you're confident shepherd's
+# awareness gates + CI suffice for this repo's release flow.
+auto_merge_to_default: false
+
+# Non-trunk merges (develop, feature stacks) — generally safe.
+auto_merge_to_secondary: true
+
+# Skip auto-merge on PRs larger than this many additions (LOC).
+max_loc_for_auto_merge: 500
+
+# Don't auto-merge a PR updated within this many minutes (lets author finish).
+fresh_pr_hold_minutes: 10
+
+# PR labels that block all autonomous actions.
+held_labels:
+  - wip
+  - hold
+  - do-not-merge
+  - dontmerge
+  - blocked
