@@ -6,7 +6,10 @@ class PipelineApi {
   /// NimbleDashboard backend URL.
   /// In dev: localhost via port forwarding or local network IP.
   /// In prod: replace with deployed URL.
-  static const String baseUrl = 'http://10.0.2.2:8001'; // Android emulator -> host
+  // Dev: 10.0.2.2 is Android emulator's alias for the host machine.
+  // NimbleDashboard backend runs on port 8013 (see NimbleDashboard/backend/main.py).
+  // For physical device on same LAN, replace with your machine's local IP, e.g. 192.168.x.x:8013.
+  static const String baseUrl = 'http://10.0.2.2:8013'; // Android emulator -> host:8013
 
   /// Send a saved property to the deal pipeline for scoring.
   ///
