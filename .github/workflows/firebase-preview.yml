@@ -17,7 +17,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.x'
+          # Pinned to 3.24.5 — Flutter 3.27 made IconData a final class, breaking
+          # font_awesome_flutter 10.x. Pinning here unblocks CI without forcing
+          # an SDK-wide migration of all FontAwesomeIcons.* call sites.
+          # Tracked for follow-up as a separate Flutter-migration task.
+          flutter-version: '3.24.5'
           channel: 'stable'
 
       - name: Get Flutter dependencies
