@@ -1,0 +1,173 @@
+# Template for .github/workflows/qc-deep.yml — install one copy per repo.
+# Replace realdeal below with the adapter id: fluidcm | nimble | oa | realdeal
+#
+# Required repo secret: ANTHROPIC_API_KEY
+# Optional: QC_DEEP_BUDGET_USD (default 1.50)
+#
+# Behavior:
+#   - Runs on pull_request opened / synchronize / reopened
+#   - Checks out the QE auditor code from OperationAlpha
+#   - Runs scripts/qc.py --deep against the PR base SHA
+#   - Posts findings as a sticky PR comment (one comment, updated each push)
+#   - Does NOT fail the build — advisory only, BLOCK severity escalates to comment header
+name: QC Deep (QE Auditor)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  qc-deep:
+    runs-on: ubuntu-latest
+    # Skip if author can't grant secrets (forks won't have ANTHROPIC_API_KEY)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Check out PR
+        uses: actions/checkout@v4
+        with:
+          path: repo
+          fetch-depth: 0   # need history to diff against base sha
+
+      - name: Sparse checkout OperationAlpha (qc.py + daemon/qe stack)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/OperationAlpha
+          path: oa
+          sparse-checkout: |
+            scripts/qc.py
+            daemon/qe
+            daemon/services/qe_findings.py
+            daemon/services/cli_wrapper.py
+            daemon/services/claude_code_service.py
+            daemon/services/job_history.py
+            daemon/jobs/job_session.py
+            daemon/config.py
+            daemon/__init__.py
+            daemon/jobs/__init__.py
+            daemon/services/__init__.py
+            requirements-qc.txt
+          sparse-checkout-cone-mode: false
+          token: ${{ secrets.OA_CHECKOUT_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install QC dependencies
+        run: pip install -r oa/requirements-qc.txt
+
+      - name: Run QC deep audit
+        id: qc
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          QE_USE_CLAUDE_CODE: 'false'   # no Max-subscription CLI in CI; use API
+          PYTHONPATH: ${{ github.workspace }}/oa
+        run: |
+          set +e
+          python oa/scripts/qc.py \
+            --repo realdeal \
+            --root "${{ github.workspace }}/repo" \
+            --deep \
+            --against "${{ github.event.pull_request.base.sha }}" \
+            --cost-cap-usd "${{ vars.QC_DEEP_BUDGET_USD || '1.50' }}" \
+            --json > qc_findings.json
+          QC_EXIT=$?
+          echo "qc_exit=$QC_EXIT" >> "$GITHUB_OUTPUT"
+          echo "exit code: $QC_EXIT"
+          set -e
+
+      - name: Render findings as Markdown
+        id: render
+        run: |
+          python - <<'PY'
+          import json, os, pathlib
+          data = json.loads(pathlib.Path('qc_findings.json').read_text())
+          severities = data.get('severity_counts', {})
+          lines = []
+          header_marker = "<!-- qc-deep-bot -->"
+          lines.append(header_marker)
+          lines.append(f"## QC Deep Audit — {data.get('repo')} ({data.get('mode')})")
+          lines.append("")
+          lines.append(
+              f"**Files scanned:** {data.get('files_scanned', 0)} | "
+              f"**Findings:** {data.get('findings_total', 0)} "
+              f"(critical={severities.get('critical', 0)}, "
+              f"high={severities.get('high', 0)}, "
+              f"medium={severities.get('medium', 0)}, "
+              f"low={severities.get('low', 0)})"
+          )
+          lines.append(
+              f"**Cost:** ${data.get('real_cost_usd', 0):.4f}"
+              + (" — :warning: cost cap hit (truncated)" if data.get('cost_cap_hit') else "")
+          )
+          block = data.get('block_count', 0)
+          if block:
+              lines.append("")
+              lines.append(f"> :no_entry: **{block} BLOCK-severity finding(s)** — recommend resolving before merge.")
+          lines.append("")
+
+          findings = data.get('findings') or []
+          if not findings:
+              lines.append("Clean. No findings.")
+          else:
+              # Group by persona
+              by_p = {}
+              for f in findings:
+                  by_p.setdefault(f.get('persona', 'other'), []).append(f)
+              sev_emoji = {'critical': ':red_circle:', 'high': ':orange_circle:',
+                           'medium': ':yellow_circle:', 'low': ':white_circle:'}
+              sev_rank = {'critical': 4, 'high': 3, 'medium': 2, 'low': 1}
+              for persona in sorted(by_p):
+                  bucket = sorted(by_p[persona], key=lambda x: -sev_rank.get(x.get('severity', 'low'), 0))
+                  lines.append(f"<details>")
+                  lines.append(f"<summary><strong>{persona}</strong> — {len(bucket)} finding(s)</summary>")
+                  lines.append("")
+                  for f in bucket[:25]:
+                      sev = f.get('severity', '')
+                      emoji = sev_emoji.get(sev, '')
+                      file_path = f.get('file_path', '')
+                      line_no = f.get('line_number')
+                      loc = f"{file_path}:{line_no}" if line_no else file_path
+                      citation = f.get('citation', '')
+                      evidence = (f.get('evidence', '') or '').strip().replace('\n', ' ')[:240]
+                      lines.append(f"- {emoji} **[{sev.upper()}]** `{loc}` — {citation}")
+                      if evidence:
+                          lines.append(f"  > {evidence}")
+                  if len(bucket) > 25:
+                      lines.append(f"")
+                      lines.append(f"_…and {len(bucket) - 25} more not shown._")
+                  lines.append("")
+                  lines.append(f"</details>")
+                  lines.append("")
+
+          lines.append("---")
+          lines.append("_Generated by QC Deep — QE Auditor. Override via PR label `qc-skip`._")
+          pathlib.Path('qc_comment.md').write_text("\n".join(lines), encoding='utf-8')
+          PY
+
+      - name: Post sticky PR comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          # Find existing bot comment by marker; update it if found, else create new
+          PR="${{ github.event.pull_request.number }}"
+          OWNER="${{ github.repository_owner }}"
+          REPO="${{ github.event.repository.name }}"
+          EXISTING=$(gh api "repos/$OWNER/$REPO/issues/$PR/comments" \
+                     --jq '.[] | select(.body | contains("<!-- qc-deep-bot -->")) | .id' \
+                     | head -1 || true)
+          if [[ -n "$EXISTING" ]]; then
+              echo "Updating existing comment $EXISTING"
+              gh api -X PATCH "repos/$OWNER/$REPO/issues/comments/$EXISTING" \
+                  -f body="$(cat qc_comment.md)"
+          else
+              echo "Creating new comment"
+              gh pr comment "$PR" --body-file qc_comment.md
+          fi
