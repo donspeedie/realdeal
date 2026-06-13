@@ -37,7 +37,10 @@ dependencies:
   cloud_functions: 5.5.2
   cloud_functions_platform_interface: 5.7.2
   cloud_functions_web: 4.11.2
-  collection: 1.19.1
+  # Relaxed from exact 1.19.1: flutter_test (SDK 3.24.5) pins collection 1.18.0,
+  # so an exact 1.19.1 pin makes `flutter pub get` unsolvable in CI. Caret lets
+  # pub resolve to the SDK-compatible 1.18.0.
+  collection: ^1.18.0
   device_info_plus: 11.5.0
   device_info_plus_platform_interface: 7.0.3
   easy_debounce: 2.0.1
