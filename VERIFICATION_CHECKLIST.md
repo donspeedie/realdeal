@@ -18,15 +18,15 @@
 | 4c — Remove `RAPID_API_KEY` | ⚠️ DORMANT | Secret still exists in `habu-1gxak2` project but **NOT BOUND to any active function**. Zero billing risk. Pending deletion (P0 destructive op). |
 | 5 — End-to-end verify | ✅ EFFECTIVELY DONE | OA Data API endpoints respond correctly. Functions wired correctly. Production scoring runs through OA Data API. |
 
-### Known issue (filed 2026-04-25)
+### Known issue (filed 2026-04-25) — ✅ RESOLVED 2026-06-12 (option a)
 
-`/api/v1/listings/search?location=Stockton` returns 2 results; `location=Stockton, CA` returns 0. The OA Data API's location parser doesn't handle `"City, State"` format. **RealDeal's `oaDataApi.js` likely passes that format** (matching Zillow's old API), causing silent 0-result responses in production scans.
+`/api/v1/listings/search?location=Stockton` returns 2 results; `location=Stockton, CA` returns 0. The OA Data API's location parser doesn't handle `"City, State"` format. **RealDeal's `oaDataApi.js` passed that format** (matching Zillow's old API), causing silent 0-result responses in production scans.
 
-**Fix options:**
-- (a) Strip state suffix in `oaDataApi.js` before sending: `location.split(',')[0].trim()`
-- (b) Update OA Data API location parser in `OperationAlpha/data_api/routes/listings.py` to accept `"City, State"` format
+**Fix shipped:** `oaDataApi.js` now strips the state suffix via `normalizeLocation()` before sending `location` to the search and comps endpoints (option a). Covered by `tests/normalizeLocation.test.js`.
 
-Recommend (b) — Zillow-shape compatibility is the explicit design goal.
+**Still recommended (option b):** update the OA Data API location parser in `OperationAlpha/data_api/routes/listings.py` to accept `"City, State"` natively — Zillow-shape compatibility is the explicit design goal. Until then, option (a) prevents the silent 0-result failures.
+
+A **scan-health canary** (`scanDealsDaily` → `scanHealth` collection) now records per-market scanned counts each run and emails an alert when any market returns 0 results on two consecutive runs, so a regression like this can no longer fail silently.
 
 ---
 

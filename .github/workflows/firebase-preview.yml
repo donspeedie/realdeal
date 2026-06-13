@@ -8,6 +8,28 @@ permissions:
   pull-requests: write
 
 jobs:
+  functions-test:
+    runs-on: ubuntu-latest
+    name: Functions Tests (drift guard)
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          cd functions
+          npm ci
+
+      - name: Run Jest tests
+        run: |
+          cd functions
+          npm test
+
   build-and-preview:
     runs-on: ubuntu-latest
 

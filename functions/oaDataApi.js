@@ -14,6 +14,24 @@ const { getCachedOrFetch } = require("./cacheUtils");
 const OA_DATA_API_URL = process.env.OA_DATA_API_URL || "http://localhost:8010";
 
 /**
+ * Normalize a location string for the OA Data API.
+ *
+ * The OA Data API's location parser does not handle the "City, State" format
+ * (e.g. "Stockton, CA" returns 0 results while "Stockton" returns matches).
+ * RealDeal historically passed Zillow-shape "City, State" strings, which caused
+ * silent 0-result responses in production scans. Strip the state suffix so the
+ * parser receives a bare city. See VERIFICATION_CHECKLIST.md §0 (fix option a).
+ *
+ * @param {string} location - Raw location (may be "City, State" or "City").
+ * @returns {string} The city portion, trimmed. Non-strings pass through as-is.
+ */
+function normalizeLocation(location) {
+  if (typeof location !== "string") return location;
+  const city = location.split(",")[0].trim();
+  return city || location;
+}
+
+/**
  * Replaces fetchZillowDataWithCache from zillowApi.js.
  * Routes to OA Data API based on endpoint name.
  *
@@ -56,7 +74,7 @@ async function fetchZillowDataWithCache(endpoint, config, maxRetries = 2) {
         } else if (endpoint === "propertyExtendedSearch") {
           url = `${OA_DATA_API_URL}/api/v1/listings/search`;
           params = {
-            location: config.location,
+            location: normalizeLocation(config.location),
             min_price: config.minPrice || config.min_price,
             max_price: config.maxPrice || config.max_price,
           };
@@ -118,7 +136,7 @@ async function fetchRedfinDataWithCache(endpoint, config, maxRetries = 2) {
     while (retries <= maxRetries) {
       try {
         let url;
-        const params = { location: config.location, limit: 50 };
+        const params = { location: normalizeLocation(config.location), limit: 50 };
 
         if (endpoint === "searchSold") {
           url = `${OA_DATA_API_URL}/api/v1/comps/sold`;
@@ -193,4 +211,5 @@ module.exports = {
   fetchRedfinDataWithCache,
   fetchMarketSignal,
   fetchDistressCheck,
+  normalizeLocation,
 };

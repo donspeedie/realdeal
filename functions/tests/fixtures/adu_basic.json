@@ -1,0 +1,6 @@
+{
+  "prop": { "zpid": "gold-adu", "price": 300000, "livingArea": 1200, "bedrooms": 3, "bathrooms": 2, "lotAreaValue": 8000, "lotAreaUnit": "sqft" },
+  "params": { "bypassMinReturn": true },
+  "pricePerSqFt": 300,
+  "twoBedAvg": 90000
+}
