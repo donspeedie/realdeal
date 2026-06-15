@@ -1166,6 +1166,7 @@ exports.scanDealsDaily = onSchedule({
   const userCalcParams = primaryEmail ? await loadUserCalcParams(db, primaryEmail) : {};
 
   // 3. Scan each market
+  const marketHealth = [];
   for (const doc of configsSnap.docs) {
     const cfg = doc.data();
     const label = cfg.name || cfg.location;
@@ -1249,9 +1250,59 @@ exports.scanDealsDaily = onSchedule({
       }
 
       console.log(`[DealScanner] ${label}: ${totalPropsScanned} total properties scanned`);
+      marketHealth.push({market: label, location: cfg.location, scanned: totalPropsScanned, error: null});
     } catch (err) {
       console.error(`[DealScanner] Error scanning ${label}: ${err.message}`);
+      marketHealth.push({market: label, location: cfg.location, scanned: 0, error: err.message});
     }
+  }
+
+  // 3b. Scan-health canary — detect silent zero-result markets.
+  // A market that returns 0 properties on a single run is not necessarily
+  // broken (tight filters, small inventory), but a market that returns 0 on
+  // consecutive runs is a silent-failure signal (e.g. the "City, State"
+  // location-parser bug, an expired data source, or an upstream outage).
+  // Persist health every run and alert when a zero result repeats.
+  try {
+    const zeroMarkets = marketHealth.filter((m) => m.scanned === 0).map((m) => m.market);
+
+    const prevSnap = await db.collection("scanHealth")
+      .orderBy("ranAt", "desc").limit(1).get();
+    const prevZero = new Set();
+    if (!prevSnap.empty) {
+      (prevSnap.docs[0].data().zeroMarkets || []).forEach((m) => prevZero.add(m));
+    }
+    const persistentZeroMarkets = zeroMarkets.filter((m) => prevZero.has(m));
+
+    await db.collection("scanHealth").add({
+      ranAt: admin.firestore.FieldValue.serverTimestamp(),
+      marketsScanned: marketHealth.length,
+      dealsFound: allDeals.length,
+      perMarket: marketHealth,
+      zeroMarkets,
+      persistentZeroMarkets,
+    });
+
+    if (persistentZeroMarkets.length > 0) {
+      console.error(`[DealScanner][CANARY] Persistent 0-result markets (>=2 scans): ${persistentZeroMarkets.join(", ")}`);
+      for (const email of notifyEmails) {
+        await db.collection("mail").add({
+          to: email,
+          message: {
+            subject: `⚠️ RealDeal scan canary: ${persistentZeroMarkets.length} market(s) returning 0 results`,
+            html: `<div style="font-family:Arial,sans-serif;color:#1e293b;max-width:600px;">
+              <p>The daily deal scan returned <strong>0 properties</strong> for the following market(s) on two or more consecutive runs:</p>
+              <ul>${persistentZeroMarkets.map((m) => `<li>${m}</li>`).join("")}</ul>
+              <p>This usually means a broken location query or an upstream data outage, not a genuinely empty market. Check the OA Data API and each market's <code>location</code> format in <code>scanConfigs</code>.</p>
+            </div>`,
+          },
+        });
+      }
+    } else if (zeroMarkets.length > 0) {
+      console.warn(`[DealScanner][CANARY] 0-result markets this run (watching): ${zeroMarkets.join(", ")}`);
+    }
+  } catch (canaryErr) {
+    console.error(`[DealScanner][CANARY] Health check failed: ${canaryErr.message}`);
   }
 
   // 4. Store qualifying deals

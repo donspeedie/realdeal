@@ -1,7 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const { z } = require('zod');
-const { calculateStrategy } = require('../src/strategyCalculator.js');
+const { calculateStrategy } = require('../strategyCalculator.js');
 
 const fx = (name) => JSON.parse(fs.readFileSync(path.resolve(__dirname, 'fixtures', name), 'utf8'));
 

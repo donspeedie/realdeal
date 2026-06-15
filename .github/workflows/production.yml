@@ -61,8 +61,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Pinned to 3.24.5 — see firebase-preview.yml for rationale.
-          flutter-version: '3.24.5'
+          # Flutter 3.38.6 — see firebase-preview.yml for rationale.
+          flutter-version: '3.38.6'
           channel: 'stable'
 
       - name: Get dependencies
@@ -99,6 +99,11 @@ jobs:
         run: |
           cd functions
           npm ci
+
+      - name: Run Jest tests (gate deploy)
+        run: |
+          cd functions
+          npm test
 
       - name: Deploy Functions
         uses: w9jds/firebase-action@master
