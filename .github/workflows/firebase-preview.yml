@@ -39,10 +39,11 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Flutter 3.27.4 (Dart 3.6.2): url_launcher_web 2.4.1 requires Dart
-          # ^3.6.0, and font_awesome_flutter 11.x restores Flutter 3.27+ support
-          # (IconData became a final class in 3.27). Both pins now agree on 3.27+.
-          flutter-version: '3.27.4'
+          # Flutter 3.38.6 (Dart 3.10.7), matching the committed pubspec.lock.
+          # The repo's pins (google_fonts 6.3.2 needs Dart ^3.7.0, url_launcher_web
+          # 2.4.1 needs ^3.6.0) require a current SDK; font_awesome_flutter 11.x
+          # restores Flutter 3.27+ support (IconData became final in 3.27).
+          flutter-version: '3.38.6'
           channel: 'stable'
 
       - name: Get Flutter dependencies

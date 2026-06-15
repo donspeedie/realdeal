@@ -61,8 +61,8 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          # Flutter 3.27.4 — see firebase-preview.yml for rationale.
-          flutter-version: '3.27.4'
+          # Flutter 3.38.6 — see firebase-preview.yml for rationale.
+          flutter-version: '3.38.6'
           channel: 'stable'
 
       - name: Get dependencies

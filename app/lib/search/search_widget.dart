@@ -904,7 +904,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                   FlutterFlowTheme.of(context)
                                                       .secondaryBackground,
                                               prefixIcon: Icon(
-                                                FontAwesomeIcons.dollarSign,
+                                                FontAwesomeIcons.dollarSign.data,
                                               ),
                                               suffixIcon: _model
                                                       .minimumReturnTextController!
@@ -6527,7 +6527,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                               .secondaryBackground,
                                                           prefixIcon: Icon(
                                                             FontAwesomeIcons
-                                                                .dollarSign,
+                                                                .dollarSign.data,
                                                           ),
                                                         ),
                                                         style:
@@ -6667,7 +6667,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                               .secondaryBackground,
                                                           prefixIcon: Icon(
                                                             FontAwesomeIcons
-                                                                .dollarSign,
+                                                                .dollarSign.data,
                                                           ),
                                                         ),
                                                         style:
@@ -6849,7 +6849,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                     .center,
                                             hasIcon: true,
                                             expandIcon:
-                                                FontAwesomeIcons.slidersH,
+                                                FontAwesomeIcons.slidersH.data,
                                           ),
                                         ),
                                       ),
@@ -9189,7 +9189,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                               FlutterFlowTheme.of(context).secondaryBackground,
                                                                           prefixIcon:
                                                                               Icon(
-                                                                            FontAwesomeIcons.dollarSign,
+                                                                            FontAwesomeIcons.dollarSign.data,
                                                                           ),
                                                                         ),
                                                                         style: FlutterFlowTheme.of(context)
@@ -9296,7 +9296,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                               FlutterFlowTheme.of(context).secondaryBackground,
                                                                           prefixIcon:
                                                                               Icon(
-                                                                            FontAwesomeIcons.dollarSign,
+                                                                            FontAwesomeIcons.dollarSign.data,
                                                                           ),
                                                                         ),
                                                                         style: FlutterFlowTheme.of(context)
@@ -9466,7 +9466,7 @@ class _SearchWidgetState extends State<SearchWidget>
                                                             hasIcon: true,
                                                             expandIcon:
                                                                 FontAwesomeIcons
-                                                                    .slidersH,
+                                                                    .slidersH.data,
                                                           ),
                                                         ),
                                                       ),
