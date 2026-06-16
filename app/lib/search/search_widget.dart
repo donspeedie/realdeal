@@ -1,3 +1,5 @@
+// HAND-MAINTAINED — FlutterFlow ejected 2026-01-10. Do not regenerate from FlutterFlow.
+// See flutter_flow/HAND_MAINTAINED.md for the FaIconData patch details (PR #7).
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/backend/api_requests/api_manager.dart';
