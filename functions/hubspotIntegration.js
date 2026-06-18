@@ -33,9 +33,16 @@ async function createOrUpdateContact(contactData) {
   if (contactData.lastName) properties.lastname = contactData.lastName;
   if (contactData.phone) properties.phone = contactData.phone;
 
-  // Add any custom properties
+  if (!contactData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactData.email)) {
+    throw new Error('Invalid email address');
+  }
+
+  // Add any custom properties — strip prototype-poisoning keys before merging
   if (contactData.customProperties) {
-    Object.assign(properties, contactData.customProperties);
+    const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+    for (const [k, v] of Object.entries(contactData.customProperties)) {
+      if (!BLOCKED_KEYS.has(k)) properties[k] = v;
+    }
   }
 
   try {
@@ -88,9 +95,12 @@ async function createDeal(dealData) {
   if (dealData.pipeline) properties.pipeline = dealData.pipeline;
   if (dealData.closeDate) properties.closedate = dealData.closeDate;
 
-  // Add any custom properties
+  // Add any custom properties — strip prototype-poisoning keys before merging
   if (dealData.customProperties) {
-    Object.assign(properties, dealData.customProperties);
+    const BLOCKED_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+    for (const [k, v] of Object.entries(dealData.customProperties)) {
+      if (!BLOCKED_KEYS.has(k)) properties[k] = v;
+    }
   }
 
   const associations = [];
