@@ -1,0 +1,11 @@
+# Shepherd CI policy — REPORT-ONLY onboarding (council 2026-06-26).
+#
+# Makes RealDeal a managed repo for the shepherd engine's PR triage and hygiene
+# scan, with ZERO autonomous mutation authority. Every write flag is explicitly
+# false. Turning any flag on is a deliberate, owner-approved per-repo opt-in.
+# See vault Decisions: 3. System/Decisions/2026-06-26-shepherd-rearm-finish-the-job.md
+owner: don
+auto_publish: false
+auto_merge_to_default: false
+auto_merge_to_secondary: false
+max_loc_for_auto_merge: 0
