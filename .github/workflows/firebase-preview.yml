@@ -36,7 +36,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Only the web app produces a preview. A PR that changes nothing under app/**
+      # (e.g. CI config or docs) would rebuild byte-identical web output, and Firebase
+      # Hosting rejects a preview release whose version matches the current active one
+      # ("supplied version is the current active version", HTTP 400 FAILED_PRECONDITION).
+      # Detect whether the app actually changed and skip the build + deploy when it didn't,
+      # so config/docs PRs pass instead of false-failing on a no-op preview.
+      - name: Detect app changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            app:
+              - 'app/**'
+              - 'firebase.json'
+              - '.firebaserc'
+
       - name: Setup Flutter
+        if: steps.changes.outputs.app == 'true'
         uses: subosito/flutter-action@v2
         with:
           # Flutter 3.38.6 (Dart 3.10.7), matching the committed pubspec.lock.
@@ -47,16 +64,19 @@ jobs:
           channel: 'stable'
 
       - name: Get Flutter dependencies
+        if: steps.changes.outputs.app == 'true'
         run: |
           cd app
           flutter pub get
 
       - name: Build Flutter Web
+        if: steps.changes.outputs.app == 'true'
         run: |
           cd app
           flutter build web --release
 
       - name: Deploy to Firebase Preview Channel
+        if: steps.changes.outputs.app == 'true'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
@@ -64,3 +84,7 @@ jobs:
           projectId: habu-1gxak2
           channelId: 'pr-${{ github.event.pull_request.number }}'
           expires: 7d
+
+      - name: No preview needed
+        if: steps.changes.outputs.app != 'true'
+        run: echo "No app/** changes in this PR — skipping Flutter build and Firebase preview (avoids the no-op preview 400)."
