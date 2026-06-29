@@ -187,6 +187,8 @@ curl -X POST "https://us-west1-habu-1gxak2.cloudfunctions.net/makeApiCall" \
 | GRD-1 | Restore application | 4h | Done |
 | GRD-2 | Frontend review | 8h | Pending |
 | GRD-3 | Tie into OA logic | 16h | Pending |
+| GRD-4 | Rotate/restrict committed Google Maps API keys by 2026-07-16 | 4h | Queued |
+| GRD-5 | Triage and resolve dependency audit vulnerabilities by 2026-07-16 | 8h | Queued |
 
 ---
 

@@ -40,7 +40,7 @@ class _AuthDialogueWidgetState extends State<AuthDialogueWidget>
     _model.tabBarController = TabController(
       vsync: this,
       length: 2,
-      initialIndex: 0,
+      initialIndex: 1,
     )..addListener(() => safeSetState(() {}));
 
     _model.emailAddressCreateTextController ??= TextEditingController();
@@ -53,7 +53,7 @@ class _AuthDialogueWidgetState extends State<AuthDialogueWidget>
         TextEditingController(text: 'donspeedie@gmail.com');
     _model.emailAddressFocusNode ??= FocusNode();
 
-    _model.passwordTextController ??= TextEditingController(text: 'password');
+    _model.passwordTextController ??= TextEditingController();
     _model.passwordFocusNode ??= FocusNode();
 
     animationsMap.addAll({
@@ -505,22 +505,25 @@ class _AuthDialogueWidgetState extends State<AuthDialogueWidget>
 
                                               await UserDataRecord.collection
                                                   .doc(user.uid)
-                                                  .update(
+                                                  .set(
                                                       createUserDataRecordData(
-                                                    dwnPmtRate: 0.1,
-                                                    financingRate: 0.1,
-                                                    propertyIns: 900,
-                                                    propertyTaxes: 4000,
-                                                    salRate: 0.04,
-                                                    oneBdrmMarketValue: 50000,
-                                                    twoBedAvgValue: 387500,
-                                                    aduTwoBdrmCost: 245000,
-                                                    newFutValSalperSFRate: 350,
-                                                    fixnflipDuration: 3,
-                                                    fnfImpFactor: 1.06,
-                                                    fnfImpRate: 2,
-                                                    tokens: 3,
-                                                  ));
+                                                        dwnPmtRate: 0.1,
+                                                        financingRate: 0.1,
+                                                        propertyIns: 900,
+                                                        propertyTaxes: 4000,
+                                                        salRate: 0.04,
+                                                        oneBdrmMarketValue:
+                                                            50000,
+                                                        twoBedAvgValue: 387500,
+                                                        aduTwoBdrmCost: 245000,
+                                                        newFutValSalperSFRate:
+                                                            350,
+                                                        fixnflipDuration: 3,
+                                                        fnfImpFactor: 1.06,
+                                                        fnfImpRate: 2,
+                                                        tokens: 3,
+                                                      ),
+                                                      SetOptions(merge: true));
 
                                               context.goNamedAuth(
                                                   SearchWidget.routeName,
@@ -871,17 +874,24 @@ class _AuthDialogueWidgetState extends State<AuthDialogueWidget>
                                           logFirebaseEvent(
                                               'AUTH_DIALOGUE_FORGOT_PASSWORD_BTN_ON_TAP');
                                           logFirebaseEvent('Button_auth');
-                                          GoRouter.of(context)
-                                              .prepareAuthEvent();
-                                          final user = await authManager
-                                              .signInWithGoogle(context);
-                                          if (user == null) {
+                                          final email = _model
+                                              .emailAddressTextController.text
+                                              .trim();
+                                          if (email.isEmpty) {
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Enter your email first.'),
+                                              ),
+                                            );
                                             return;
                                           }
 
-                                          context.goNamedAuth(
-                                              SearchWidget.routeName,
-                                              context.mounted);
+                                          await authManager.resetPassword(
+                                            email: email,
+                                            context: context,
+                                          );
                                         },
                                         text: 'Forgot Password?',
                                         options: FFButtonOptions(

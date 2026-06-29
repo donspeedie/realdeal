@@ -14,7 +14,6 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 
-
 export 'keep_alive_wrapper.dart';
 export 'lat_lng.dart';
 export 'place.dart';
@@ -381,13 +380,38 @@ extension StatefulWidgetExtensions on State<StatefulWidget> {
   }
 }
 
-String getCORSProxyUrl(String path) {
-  if (!kIsWeb) {
-    return path;
+const _fallbackPropertyImageUrl =
+    'https://www.fivebranches.edu/wp-content/uploads/2021/08/default-image.jpg';
+
+String _normalizeImageUrl(String? path) {
+  final value = path?.trim() ?? '';
+  if (value.isEmpty || value == '1' || value == 'imgSrc') {
+    return _fallbackPropertyImageUrl;
   }
+  return value;
+}
+
+String getCORSProxyUrl(String? path) {
+  final normalizedPath = _normalizeImageUrl(path);
+  if (!kIsWeb) {
+    return normalizedPath;
+  }
+
+  final uri = Uri.tryParse(normalizedPath);
+  if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+    return normalizedPath;
+  }
+
+  final encodedUrl = Uri.encodeComponent(normalizedPath);
+  final isLocalHost =
+      Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1';
+  if (isLocalHost) {
+    return 'http://127.0.0.1:5180/image?url=$encodedUrl';
+  }
+
   const proxyUrl =
       'https://us-west1-habu-1gxak2.cloudfunctions.net/corsProxy?url=';
-  return '$proxyUrl$path';
+  return '$proxyUrl$encodedUrl';
 }
 
 // For iOS 16 and below, set the status bar color to match the app's theme.

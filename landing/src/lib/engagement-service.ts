@@ -168,7 +168,7 @@ export async function updateEngagement(
 ): Promise<void> {
   const docRef = doc(db, ENGAGEMENTS_COLLECTION, id);
 
-  const updateData: any = { ...updates };
+  const updateData: Record<string, unknown> = { ...updates };
 
   if (updates.timestamp) {
     updateData.timestamp = updates.timestamp instanceof Date

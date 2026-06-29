@@ -44,6 +44,7 @@ const calculateBedroomPriceAverages = (properties) => {
 
 const appendZillowUrl = (url) => {
   if (!url) return "";
+  if (/^https?:\/\//i.test(url)) return encodeURI(url);
   return encodeURI(`https://www.zillow.com${url.startsWith("/") ? url : "/" + url}`);
 };
 

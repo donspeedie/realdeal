@@ -33,10 +33,10 @@ async function processProperty(prop, params, sequence, total) {
 
   // Filter out apartments based on address using regex patterns
   const apartmentPatterns = [
-    /\bapt\b/i, /\bapt[#\-\s\d]/i, /[,.\(]apt/i, /apartment/i,
-    /\bunit\b/i, /\bunit[#\-\s\d]/i, /[,.\(]unit/i,
-    /\bste\b/i, /\bste[#\-\s\d]/i, /[,.\(]ste/i,
-    /\bsuite\b/i, /\bsuite[#\-\s\d]/i,
+    /\bapt\b/i, /\bapt[#\s\d-]/i, /[,.()]apt/i, /apartment/i,
+    /\bunit\b/i, /\bunit[#\s\d-]/i, /[,.()]unit/i,
+    /\bste\b/i, /\bste[#\s\d-]/i, /[,.()]ste/i,
+    /\bsuite\b/i, /\bsuite[#\s\d-]/i,
   ];
 
   for (const pattern of apartmentPatterns) {

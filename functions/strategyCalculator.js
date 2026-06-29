@@ -55,14 +55,14 @@ function calculateStrategy(method, prop, params, pricePerSqFt, twoBedAvg, bedroo
       loanDetails.loanPayments = Number(prop.loanPayments);
     } else if (typeof params.loanPayments !== "undefined" && params.loanPayments !== null) {
       loanDetails.loanPayments = Number(params.loanPayments);
-    } else {}
+    }
 
     // Override support: Use prop.loanFees or params.loanFees if provided
     if (typeof prop.loanFees !== "undefined" && prop.loanFees !== null) {
       loanDetails.loanFees = Number(prop.loanFees);
     } else if (typeof params.loanFees !== "undefined" && params.loanFees !== null) {
       loanDetails.loanFees = Number(params.loanFees);
-    } else {}
+    }
 
     const closingDates = calculateClosingDates(config.duration);
 

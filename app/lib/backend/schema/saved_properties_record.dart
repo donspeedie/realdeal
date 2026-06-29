@@ -15,6 +15,19 @@ class SavedPropertiesRecord extends FirestoreRecord {
     _initializeFields();
   }
 
+  int? _coerceInt(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.round();
+    }
+    return int.tryParse(value.toString());
+  }
+
   // "method" field.
   String? _method;
   String get method => _method ?? '';
@@ -317,49 +330,49 @@ class SavedPropertiesRecord extends FirestoreRecord {
 
   void _initializeFields() {
     _method = snapshotData['method'] as String?;
-    _impValue = castToType<int>(snapshotData['impValue']);
-    _totalValue = castToType<int>(snapshotData['totalValue']);
-    _futureValue = castToType<int>(snapshotData['futureValue']);
-    _downPayment = castToType<int>(snapshotData['downPayment']);
-    _mortgage = castToType<int>(snapshotData['mortgage']);
-    _sellingCosts = castToType<int>(snapshotData['sellingCosts']);
-    _totalCosts = castToType<int>(snapshotData['totalCosts']);
-    _grossReturn = castToType<int>(snapshotData['grossReturn']);
-    _netReturn = castToType<int>(snapshotData['netReturn']);
+    _impValue = _coerceInt(snapshotData['impValue']);
+    _totalValue = _coerceInt(snapshotData['totalValue']);
+    _futureValue = _coerceInt(snapshotData['futureValue']);
+    _downPayment = _coerceInt(snapshotData['downPayment']);
+    _mortgage = _coerceInt(snapshotData['mortgage']);
+    _sellingCosts = _coerceInt(snapshotData['sellingCosts']);
+    _totalCosts = _coerceInt(snapshotData['totalCosts']);
+    _grossReturn = _coerceInt(snapshotData['grossReturn']);
+    _netReturn = _coerceInt(snapshotData['netReturn']);
     _address = snapshotData['address'] as String?;
     _imgSrc = snapshotData['imgSrc'] as String?;
     _latlng = snapshotData['latlng'] as LatLng?;
     _netRoi = castToType<double>(snapshotData['netRoi']);
     _detailUrl = snapshotData['detailUrl'] as String?;
-    _bedrooms = castToType<int>(snapshotData['bedrooms']);
-    _bathrooms = castToType<int>(snapshotData['bathrooms']);
-    _daysonZillow = castToType<int>(snapshotData['daysonZillow']);
-    _rentZestimate = castToType<int>(snapshotData['rentZestimate']);
+    _bedrooms = _coerceInt(snapshotData['bedrooms']);
+    _bathrooms = _coerceInt(snapshotData['bathrooms']);
+    _daysonZillow = _coerceInt(snapshotData['daysonZillow']);
+    _rentZestimate = _coerceInt(snapshotData['rentZestimate']);
     _notes = snapshotData['notes'] as String?;
-    _livingArea = castToType<int>(snapshotData['livingArea']);
-    _price = castToType<int>(snapshotData['price']);
+    _livingArea = _coerceInt(snapshotData['livingArea']);
+    _price = _coerceInt(snapshotData['price']);
     _taxInsRate = castToType<double>(snapshotData['taxInsRate']);
-    _permitFees = castToType<int>(snapshotData['permitFees']);
-    _propertyTaxes = castToType<int>(snapshotData['propertyTaxes']);
-    _propertyIns = castToType<int>(snapshotData['propertyIns']);
-    _loanFees = castToType<int>(snapshotData['loanFees']);
+    _permitFees = _coerceInt(snapshotData['permitFees']);
+    _propertyTaxes = _coerceInt(snapshotData['propertyTaxes']);
+    _propertyIns = _coerceInt(snapshotData['propertyIns']);
+    _loanFees = _coerceInt(snapshotData['loanFees']);
     _purchCloseDate = snapshotData['purchCloseDate'] as DateTime?;
     _saleCloseDate = snapshotData['saleCloseDate'] as DateTime?;
-    _propertyTaxIns = castToType<int>(snapshotData['propertyTaxIns']);
+    _propertyTaxIns = _coerceInt(snapshotData['propertyTaxIns']);
     _cashOnCashReturn = castToType<double>(snapshotData['cashOnCashReturn']);
-    _duration = castToType<int>(snapshotData['duration']);
-    _proposedLivingArea = castToType<int>(snapshotData['proposedLivingArea']);
-    _futureBeds = castToType<int>(snapshotData['futureBeds']);
-    _futureBaths = castToType<int>(snapshotData['futureBaths']);
-    _zestimate = castToType<int>(snapshotData['zestimate']);
-    _yearBuilt = castToType<int>(snapshotData['yearBuilt']);
+    _duration = _coerceInt(snapshotData['duration']);
+    _proposedLivingArea = _coerceInt(snapshotData['proposedLivingArea']);
+    _futureBeds = _coerceInt(snapshotData['futureBeds']);
+    _futureBaths = _coerceInt(snapshotData['futureBaths']);
+    _zestimate = _coerceInt(snapshotData['zestimate']);
+    _yearBuilt = _coerceInt(snapshotData['yearBuilt']);
     _description = snapshotData['description'] as String?;
-    _loanPayments = castToType<int>(snapshotData['loanPayments']);
-    _loanAmount = castToType<int>(snapshotData['loanAmount']);
-    _cashNeeded = castToType<int>(snapshotData['cashNeeded']);
+    _loanPayments = _coerceInt(snapshotData['loanPayments']);
+    _loanAmount = _coerceInt(snapshotData['loanAmount']);
+    _cashNeeded = _coerceInt(snapshotData['cashNeeded']);
     _lotAreaValue = castToType<double>(snapshotData['lotAreaValue']);
     _id = snapshotData['id'] as String?;
-    _futureArea = castToType<int>(snapshotData['futureArea']);
+    _futureArea = _coerceInt(snapshotData['futureArea']);
     _redfinSoldComps = getStructList(
       snapshotData['redfinSoldComps'],
       RedfinHomeDataStruct.fromMap,
@@ -373,16 +386,16 @@ class SavedPropertiesRecord extends FirestoreRecord {
     _groc = castToType<double>(snapshotData['groc']);
     _avgCompTotalValue = castToType<double>(snapshotData['avgCompTotalValue']);
     _calculateBedroomPriceAverages =
-        castToType<int>(snapshotData['calculateBedroomPriceAverages']);
+        _coerceInt(snapshotData['calculateBedroomPriceAverages']);
     _irr = castToType<double>(snapshotData['irr']);
     _compsAvgPricePerBdrm =
         castToType<double>(snapshotData['compsAvgPricePerBdrm']);
-    _pricePerSqft = castToType<int>(snapshotData['pricePerSqft']);
+    _pricePerSqft = _coerceInt(snapshotData['pricePerSqft']);
     _roe = castToType<double>(snapshotData['roe']);
-    _netRetnalIncome5yrs = castToType<int>(snapshotData['netRetnalIncome5yrs']);
+    _netRetnalIncome5yrs = _coerceInt(snapshotData['netRetnalIncome5yrs']);
     _notesARV = snapshotData['notesARV'] as String?;
-    _avgCompPrice = castToType<int>(snapshotData['avgCompPrice']);
-    _totalReturn = castToType<int>(snapshotData['totalReturn']);
+    _avgCompPrice = _coerceInt(snapshotData['avgCompPrice']);
+    _totalReturn = _coerceInt(snapshotData['totalReturn']);
   }
 
   static CollectionReference get collection =>

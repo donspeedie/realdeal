@@ -906,7 +906,8 @@ class _SearchWidgetState extends State<SearchWidget>
                                                   FlutterFlowTheme.of(context)
                                                       .secondaryBackground,
                                               prefixIcon: Icon(
-                                                FontAwesomeIcons.dollarSign.data,
+                                                FontAwesomeIcons
+                                                    .dollarSign.data,
                                               ),
                                               suffixIcon: _model
                                                       .minimumReturnTextController!
@@ -6529,7 +6530,8 @@ class _SearchWidgetState extends State<SearchWidget>
                                                               .secondaryBackground,
                                                           prefixIcon: Icon(
                                                             FontAwesomeIcons
-                                                                .dollarSign.data,
+                                                                .dollarSign
+                                                                .data,
                                                           ),
                                                         ),
                                                         style:
@@ -6669,7 +6671,8 @@ class _SearchWidgetState extends State<SearchWidget>
                                                               .secondaryBackground,
                                                           prefixIcon: Icon(
                                                             FontAwesomeIcons
-                                                                .dollarSign.data,
+                                                                .dollarSign
+                                                                .data,
                                                           ),
                                                         ),
                                                         style:
@@ -6968,8 +6971,10 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                     Builder(
                                                               builder:
                                                                   (context) {
-                                                                final resultsFromReinvestCalcs = _model.searchFieldTextController1.text !=
-                                                                            ''
+                                                                final resultsFromReinvestCalcs = _model
+                                                                            .searchFieldTextController1
+                                                                            .text !=
+                                                                        ''
                                                                     ? (_model.choiceChipsValue1 !=
                                                                                 null &&
                                                                             _model.choiceChipsValue1 !=
@@ -7394,8 +7399,8 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                 !(_model.selectedFieldSavedProperty !=
                                                                     null) &&
                                                                 (_model.searchFieldTextController1
-                                                                            .text !=
-                                                                        '') &&
+                                                                        .text !=
+                                                                    '') &&
                                                                 (_model
                                                                     .searchReinvestCalcsComb
                                                                     .isNotEmpty),
@@ -7540,372 +7545,446 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                 );
                                                               }
                                                               // Load initial deal alerts if not yet loaded (admin only)
-                                                              if (currentUserEmail == 'despeedie@nimbledev.llc' &&
-                                                                  _model.loadedDealAlerts.isEmpty &&
-                                                                  !_model.isLoadingAlerts &&
-                                                                  _model.hasMoreAlerts) {
-                                                                _model.isLoadingAlerts = true;
-                                                                DealAlertsRecord.collection
-                                                                    .orderBy('scannedAt', descending: true)
+                                                              if (currentUserEmail ==
+                                                                      'despeedie@nimbledev.llc' &&
+                                                                  _model
+                                                                      .loadedDealAlerts
+                                                                      .isEmpty &&
+                                                                  !_model
+                                                                      .isLoadingAlerts &&
+                                                                  _model
+                                                                      .hasMoreAlerts) {
+                                                                _model.isLoadingAlerts =
+                                                                    true;
+                                                                DealAlertsRecord
+                                                                    .collection
+                                                                    .orderBy(
+                                                                        'scannedAt',
+                                                                        descending:
+                                                                            true)
                                                                     .limit(20)
                                                                     .get()
-                                                                    .then((snap) {
-                                                                  final docs = snap.docs
-                                                                      .map((d) => DealAlertsRecord.fromSnapshot(d))
+                                                                    .then(
+                                                                        (snap) {
+                                                                  final docs = snap
+                                                                      .docs
+                                                                      .map((d) =>
+                                                                          DealAlertsRecord.fromSnapshot(
+                                                                              d))
                                                                       .toList();
-                                                                  _model.loadedDealAlerts = docs;
-                                                                  _model.lastAlertDocument = snap.docs.isNotEmpty ? snap.docs.last : null;
-                                                                  _model.hasMoreAlerts = snap.docs.length >= 20;
-                                                                  _model.isLoadingAlerts = false;
-                                                                  safeSetState(() {});
+                                                                  _model.loadedDealAlerts =
+                                                                      docs;
+                                                                  _model
+                                                                      .lastAlertDocument = snap
+                                                                          .docs
+                                                                          .isNotEmpty
+                                                                      ? snap
+                                                                          .docs
+                                                                          .last
+                                                                      : null;
+                                                                  _model
+                                                                      .hasMoreAlerts = snap
+                                                                          .docs
+                                                                          .length >=
+                                                                      20;
+                                                                  _model.isLoadingAlerts =
+                                                                      false;
+                                                                  safeSetState(
+                                                                      () {});
                                                                 });
                                                               }
 
-                                                              final savedList = savedSnapshot.data!;
+                                                              final savedList =
+                                                                  savedSnapshot
+                                                                      .data!;
 
                                                               // Deduplicate: remove alerts already saved by zpid
-                                                              final savedZpids = savedList.map((s) => s.id).toSet();
-                                                              final uniqueAlerts = _model.loadedDealAlerts
-                                                                  .where((a) => !savedZpids.contains(a.zpid))
+                                                              final savedZpids =
+                                                                  savedList
+                                                                      .map((s) =>
+                                                                          s.id)
+                                                                      .toSet();
+                                                              final uniqueAlerts = _model
+                                                                  .loadedDealAlerts
+                                                                  .where((a) =>
+                                                                      !savedZpids
+                                                                          .contains(
+                                                                              a.zpid))
                                                                   .toList();
 
-                                                              final totalCount = savedList.length + uniqueAlerts.length +
-                                                                  (_model.hasMoreAlerts && uniqueAlerts.isNotEmpty ? 1 : 0);
+                                                              final totalCount = savedList
+                                                                      .length +
+                                                                  uniqueAlerts
+                                                                      .length +
+                                                                  (_model.hasMoreAlerts &&
+                                                                          uniqueAlerts
+                                                                              .isNotEmpty
+                                                                      ? 1
+                                                                      : 0);
 
-                                                              return NotificationListener<ScrollNotification>(
-                                                                onNotification: (scrollInfo) {
-                                                                  if (scrollInfo.metrics.pixels >=
-                                                                          scrollInfo.metrics.maxScrollExtent - 200 &&
-                                                                      !_model.isLoadingAlerts &&
-                                                                      _model.hasMoreAlerts &&
-                                                                      _model.lastAlertDocument != null) {
-                                                                    _model.isLoadingAlerts = true;
-                                                                    safeSetState(() {});
-                                                                    DealAlertsRecord.collection
-                                                                        .orderBy('scannedAt', descending: true)
-                                                                        .startAfterDocument(_model.lastAlertDocument!)
-                                                                        .limit(20)
+                                                              return NotificationListener<
+                                                                  ScrollNotification>(
+                                                                onNotification:
+                                                                    (scrollInfo) {
+                                                                  if (scrollInfo
+                                                                              .metrics
+                                                                              .pixels >=
+                                                                          scrollInfo.metrics.maxScrollExtent -
+                                                                              200 &&
+                                                                      !_model
+                                                                          .isLoadingAlerts &&
+                                                                      _model
+                                                                          .hasMoreAlerts &&
+                                                                      _model.lastAlertDocument !=
+                                                                          null) {
+                                                                    _model.isLoadingAlerts =
+                                                                        true;
+                                                                    safeSetState(
+                                                                        () {});
+                                                                    DealAlertsRecord
+                                                                        .collection
+                                                                        .orderBy(
+                                                                            'scannedAt',
+                                                                            descending:
+                                                                                true)
+                                                                        .startAfterDocument(_model
+                                                                            .lastAlertDocument!)
+                                                                        .limit(
+                                                                            20)
                                                                         .get()
-                                                                        .then((snap) {
-                                                                      final docs = snap.docs
-                                                                          .map((d) => DealAlertsRecord.fromSnapshot(d))
+                                                                        .then(
+                                                                            (snap) {
+                                                                      final docs = snap
+                                                                          .docs
+                                                                          .map((d) =>
+                                                                              DealAlertsRecord.fromSnapshot(d))
                                                                           .toList();
-                                                                      _model.loadedDealAlerts.addAll(docs);
-                                                                      _model.lastAlertDocument = snap.docs.isNotEmpty ? snap.docs.last : null;
-                                                                      _model.hasMoreAlerts = snap.docs.length >= 20;
-                                                                      _model.isLoadingAlerts = false;
-                                                                      safeSetState(() {});
+                                                                      _model
+                                                                          .loadedDealAlerts
+                                                                          .addAll(
+                                                                              docs);
+                                                                      _model
+                                                                          .lastAlertDocument = snap
+                                                                              .docs
+                                                                              .isNotEmpty
+                                                                          ? snap
+                                                                              .docs
+                                                                              .last
+                                                                          : null;
+                                                                      _model.hasMoreAlerts =
+                                                                          snap.docs.length >=
+                                                                              20;
+                                                                      _model.isLoadingAlerts =
+                                                                          false;
+                                                                      safeSetState(
+                                                                          () {});
                                                                     });
                                                                   }
                                                                   return false;
                                                                 },
                                                                 child: ListView
-                                                                  .separated(
-                                                                padding: EdgeInsets
-                                                                    .symmetric(
-                                                                        vertical:
-                                                                            12.0),
-                                                                shrinkWrap:
-                                                                    true,
-                                                                scrollDirection:
-                                                                    Axis.vertical,
-                                                                itemCount:
-                                                                    totalCount,
-                                                                separatorBuilder: (_,
-                                                                        __) =>
-                                                                    SizedBox(
-                                                                        height:
-                                                                            12.0),
-                                                                itemBuilder:
-                                                                    (context,
-                                                                        listViewIndex) {
-                                                                  // --- Saved property card ---
-                                                                  if (listViewIndex < savedList.length) {
-                                                                  final listViewSavedPropertiesRecord =
-                                                                      savedList[
-                                                                          listViewIndex];
-                                                                  return Stack(
-                                                                    alignment:
-                                                                        AlignmentDirectional(
+                                                                    .separated(
+                                                                  padding: EdgeInsets
+                                                                      .symmetric(
+                                                                          vertical:
+                                                                              12.0),
+                                                                  shrinkWrap:
+                                                                      true,
+                                                                  scrollDirection:
+                                                                      Axis.vertical,
+                                                                  itemCount:
+                                                                      totalCount,
+                                                                  separatorBuilder: (_,
+                                                                          __) =>
+                                                                      SizedBox(
+                                                                          height:
+                                                                              12.0),
+                                                                  itemBuilder:
+                                                                      (context,
+                                                                          listViewIndex) {
+                                                                    // --- Saved property card ---
+                                                                    if (listViewIndex <
+                                                                        savedList
+                                                                            .length) {
+                                                                      final listViewSavedPropertiesRecord =
+                                                                          savedList[
+                                                                              listViewIndex];
+                                                                      return Stack(
+                                                                        alignment: AlignmentDirectional(
                                                                             -1.0,
                                                                             -1.0),
-                                                                    children: [
-                                                                      Padding(
-                                                                        padding: EdgeInsetsDirectional.fromSTEB(
-                                                                            8.0,
-                                                                            0.0,
-                                                                            8.0,
-                                                                            0.0),
-                                                                        child:
-                                                                            InkWell(
-                                                                          splashColor:
-                                                                              Colors.transparent,
-                                                                          focusColor:
-                                                                              Colors.transparent,
-                                                                          hoverColor:
-                                                                              Colors.transparent,
-                                                                          highlightColor:
-                                                                              Colors.transparent,
-                                                                          onTap:
-                                                                              () async {
-                                                                            logFirebaseEvent('SEARCH_PAGE_Container_a8cu6k0e_ON_TAP');
-                                                                            if (loggedIn ==
-                                                                                true) {
-                                                                              logFirebaseEvent('ImageCard_update_page_state');
-                                                                              _model.selectedProperty = null;
-                                                                              _model.selectedFieldSavedProperty = null;
-                                                                              _model.mapCoordinates = null;
-                                                                              safeSetState(() {});
-                                                                              logFirebaseEvent('ImageCard_update_page_state');
-                                                                              _model.selectedFieldSavedProperty = listViewSavedPropertiesRecord;
-                                                                              _model.mapCoordinates = listViewSavedPropertiesRecord.latlng;
-                                                                              safeSetState(() {});
-                                                                              if (MediaQuery.sizeOf(context).width <= 450.0) {
-                                                                                logFirebaseEvent('ImageCard_update_page_state');
-                                                                                _model.savedPropertiesMapView = true;
-                                                                                safeSetState(() {});
-                                                                              }
-                                                                            } else {
-                                                                              logFirebaseEvent('ImageCard_show_snack_bar');
-                                                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                                                SnackBar(
-                                                                                  content: Text(
-                                                                                    'Please purchase token to continue',
-                                                                                    style: TextStyle(
-                                                                                      color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                        children: [
+                                                                          Padding(
+                                                                            padding: EdgeInsetsDirectional.fromSTEB(
+                                                                                8.0,
+                                                                                0.0,
+                                                                                8.0,
+                                                                                0.0),
+                                                                            child:
+                                                                                InkWell(
+                                                                              splashColor: Colors.transparent,
+                                                                              focusColor: Colors.transparent,
+                                                                              hoverColor: Colors.transparent,
+                                                                              highlightColor: Colors.transparent,
+                                                                              onTap: () async {
+                                                                                logFirebaseEvent('SEARCH_PAGE_Container_a8cu6k0e_ON_TAP');
+                                                                                if (loggedIn == true) {
+                                                                                  logFirebaseEvent('ImageCard_update_page_state');
+                                                                                  _model.selectedProperty = null;
+                                                                                  _model.selectedFieldSavedProperty = null;
+                                                                                  _model.mapCoordinates = null;
+                                                                                  safeSetState(() {});
+                                                                                  logFirebaseEvent('ImageCard_update_page_state');
+                                                                                  _model.selectedFieldSavedProperty = listViewSavedPropertiesRecord;
+                                                                                  _model.mapCoordinates = listViewSavedPropertiesRecord.latlng;
+                                                                                  safeSetState(() {});
+                                                                                  if (MediaQuery.sizeOf(context).width <= 450.0) {
+                                                                                    logFirebaseEvent('ImageCard_update_page_state');
+                                                                                    _model.savedPropertiesMapView = true;
+                                                                                    safeSetState(() {});
+                                                                                  }
+                                                                                } else {
+                                                                                  logFirebaseEvent('ImageCard_show_snack_bar');
+                                                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                                                    SnackBar(
+                                                                                      content: Text(
+                                                                                        'Please purchase token to continue',
+                                                                                        style: TextStyle(
+                                                                                          color: FlutterFlowTheme.of(context).secondaryBackground,
+                                                                                        ),
+                                                                                      ),
+                                                                                      duration: Duration(milliseconds: 4000),
+                                                                                      backgroundColor: FlutterFlowTheme.of(context).secondary,
                                                                                     ),
-                                                                                  ),
-                                                                                  duration: Duration(milliseconds: 4000),
-                                                                                  backgroundColor: FlutterFlowTheme.of(context).secondary,
+                                                                                  );
+                                                                                }
+                                                                              },
+                                                                              child: ImageCardWidget(
+                                                                                key: Key('Keya8c_${listViewIndex}_of_${totalCount}'),
+                                                                                price: listViewSavedPropertiesRecord.price,
+                                                                                address: listViewSavedPropertiesRecord.address,
+                                                                                duration: listViewSavedPropertiesRecord.duration,
+                                                                                method: listViewSavedPropertiesRecord.method,
+                                                                                grossReturn: listViewSavedPropertiesRecord.grossReturn,
+                                                                                totalCosts: listViewSavedPropertiesRecord.totalCosts,
+                                                                                financingCosts: listViewSavedPropertiesRecord.sellingCosts,
+                                                                                bedrooms: listViewSavedPropertiesRecord.bedrooms,
+                                                                                baths: listViewSavedPropertiesRecord.bathrooms,
+                                                                                livingArea: listViewSavedPropertiesRecord.livingArea,
+                                                                                lotArea: listViewSavedPropertiesRecord.lotAreaValue,
+                                                                                imgSrc: listViewSavedPropertiesRecord.imgSrc,
+                                                                                zpid: FFAppConstants.zipId.toString(),
+                                                                                estimatedValue: listViewSavedPropertiesRecord.zestimate,
+                                                                                downPayment: listViewSavedPropertiesRecord.downPayment,
+                                                                                yearBuilt: listViewSavedPropertiesRecord.yearBuilt,
+                                                                                loanAmount: listViewSavedPropertiesRecord.loanAmount,
+                                                                                detailUrl: listViewSavedPropertiesRecord.detailUrl,
+                                                                                cashNeeded: listViewSavedPropertiesRecord.cashNeeded,
+                                                                                proposedClosedDate: listViewSavedPropertiesRecord.purchCloseDate,
+                                                                                proposedSaleDate: listViewSavedPropertiesRecord.saleCloseDate,
+                                                                                netReturn: listViewSavedPropertiesRecord.netReturn,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                          FlutterFlowIconButton(
+                                                                            borderRadius:
+                                                                                8.0,
+                                                                            buttonSize:
+                                                                                40.0,
+                                                                            fillColor:
+                                                                                FlutterFlowTheme.of(context).error,
+                                                                            icon:
+                                                                                Icon(
+                                                                              Icons.close,
+                                                                              color: FlutterFlowTheme.of(context).info,
+                                                                              size: 24.0,
+                                                                            ),
+                                                                            onPressed:
+                                                                                () async {
+                                                                              logFirebaseEvent('SEARCH_PAGE_close_ICN_ON_TAP');
+                                                                              logFirebaseEvent('IconButton_alert_dialog');
+                                                                              var confirmDialogResponse = await showDialog<bool>(
+                                                                                    context: context,
+                                                                                    builder: (alertDialogContext) {
+                                                                                      return AlertDialog(
+                                                                                        title: Text('Delete Entry'),
+                                                                                        content: Text('Are you sure you want to delete this entry?'),
+                                                                                        actions: [
+                                                                                          TextButton(
+                                                                                            onPressed: () => Navigator.pop(alertDialogContext, false),
+                                                                                            child: Text('Cancel'),
+                                                                                          ),
+                                                                                          TextButton(
+                                                                                            onPressed: () => Navigator.pop(alertDialogContext, true),
+                                                                                            child: Text('Confirm'),
+                                                                                          ),
+                                                                                        ],
+                                                                                      );
+                                                                                    },
+                                                                                  ) ??
+                                                                                  false;
+                                                                              if (confirmDialogResponse) {
+                                                                                logFirebaseEvent('IconButton_backend_call');
+                                                                                await listViewSavedPropertiesRecord.reference.delete();
+                                                                              }
+                                                                            },
+                                                                          ),
+                                                                        ],
+                                                                      );
+                                                                    }
+                                                                    // --- Deal alert card (with lightning bolt) ---
+                                                                    final alert =
+                                                                        uniqueAlerts[listViewIndex -
+                                                                            savedList.length];
+                                                                    return Stack(
+                                                                      alignment:
+                                                                          AlignmentDirectional(
+                                                                              1.0,
+                                                                              -1.0),
+                                                                      children: [
+                                                                        Padding(
+                                                                          padding: EdgeInsetsDirectional.fromSTEB(
+                                                                              8.0,
+                                                                              0.0,
+                                                                              8.0,
+                                                                              0.0),
+                                                                          child:
+                                                                              InkWell(
+                                                                            splashColor:
+                                                                                Colors.transparent,
+                                                                            focusColor:
+                                                                                Colors.transparent,
+                                                                            hoverColor:
+                                                                                Colors.transparent,
+                                                                            highlightColor:
+                                                                                Colors.transparent,
+                                                                            onTap:
+                                                                                () async {
+                                                                              // Save deal alert to savedProperties on tap
+                                                                              var savedRef = SavedPropertiesRecord.collection.doc('${currentUserUid}_${alert.zpid}');
+                                                                              await savedRef.set(
+                                                                                createSavedPropertiesRecordData(
+                                                                                  method: alert.method,
+                                                                                  impValue: alert.impValue,
+                                                                                  futureValue: alert.futureValue,
+                                                                                  downPayment: alert.downPayment,
+                                                                                  mortgage: alert.mortgage,
+                                                                                  sellingCosts: alert.sellingCosts,
+                                                                                  totalCosts: alert.totalCosts,
+                                                                                  grossReturn: alert.grossReturn,
+                                                                                  netReturn: alert.netReturn,
+                                                                                  address: alert.address,
+                                                                                  imgSrc: alert.imgSrc,
+                                                                                  latlng: alert.latlng,
+                                                                                  netRoi: alert.netROI,
+                                                                                  detailUrl: alert.detailUrl,
+                                                                                  bedrooms: alert.bedrooms,
+                                                                                  bathrooms: alert.bathrooms,
+                                                                                  livingArea: alert.livingArea,
+                                                                                  price: alert.price,
+                                                                                  zestimate: alert.zestimate,
+                                                                                  yearBuilt: alert.yearBuilt,
+                                                                                  description: alert.description,
+                                                                                  loanAmount: alert.loanAmount,
+                                                                                  cashNeeded: alert.cashNeeded,
+                                                                                  id: alert.zpid,
+                                                                                  userRef: currentUserReference,
+                                                                                  lotAreaValue: alert.lotAreaValue,
+                                                                                  duration: alert.duration,
+                                                                                  notes: '',
+                                                                                  notesARV: '',
                                                                                 ),
                                                                               );
-                                                                            }
-                                                                          },
-                                                                          child:
-                                                                              ImageCardWidget(
-                                                                            key:
-                                                                                Key('Keya8c_${listViewIndex}_of_${totalCount}'),
-                                                                            price:
-                                                                                listViewSavedPropertiesRecord.price,
-                                                                            address:
-                                                                                listViewSavedPropertiesRecord.address,
-                                                                            duration:
-                                                                                listViewSavedPropertiesRecord.duration,
-                                                                            method:
-                                                                                listViewSavedPropertiesRecord.method,
-                                                                            grossReturn:
-                                                                                listViewSavedPropertiesRecord.grossReturn,
-                                                                            totalCosts:
-                                                                                listViewSavedPropertiesRecord.totalCosts,
-                                                                            financingCosts:
-                                                                                listViewSavedPropertiesRecord.sellingCosts,
-                                                                            bedrooms:
-                                                                                listViewSavedPropertiesRecord.bedrooms,
-                                                                            baths:
-                                                                                listViewSavedPropertiesRecord.bathrooms,
-                                                                            livingArea:
-                                                                                listViewSavedPropertiesRecord.livingArea,
-                                                                            lotArea:
-                                                                                listViewSavedPropertiesRecord.lotAreaValue,
-                                                                            imgSrc:
-                                                                                listViewSavedPropertiesRecord.imgSrc,
-                                                                            zpid:
-                                                                                FFAppConstants.zipId.toString(),
-                                                                            estimatedValue:
-                                                                                listViewSavedPropertiesRecord.zestimate,
-                                                                            downPayment:
-                                                                                listViewSavedPropertiesRecord.downPayment,
-                                                                            yearBuilt:
-                                                                                listViewSavedPropertiesRecord.yearBuilt,
-                                                                            loanAmount:
-                                                                                listViewSavedPropertiesRecord.loanAmount,
-                                                                            detailUrl:
-                                                                                listViewSavedPropertiesRecord.detailUrl,
-                                                                            cashNeeded:
-                                                                                listViewSavedPropertiesRecord.cashNeeded,
-                                                                            proposedClosedDate:
-                                                                                listViewSavedPropertiesRecord.purchCloseDate,
-                                                                            proposedSaleDate:
-                                                                                listViewSavedPropertiesRecord.saleCloseDate,
-                                                                            netReturn:
-                                                                                listViewSavedPropertiesRecord.netReturn,
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                      FlutterFlowIconButton(
-                                                                        borderRadius:
-                                                                            8.0,
-                                                                        buttonSize:
-                                                                            40.0,
-                                                                        fillColor:
-                                                                            FlutterFlowTheme.of(context).error,
-                                                                        icon:
-                                                                            Icon(
-                                                                          Icons
-                                                                              .close,
-                                                                          color:
-                                                                              FlutterFlowTheme.of(context).info,
-                                                                          size:
-                                                                              24.0,
-                                                                        ),
-                                                                        onPressed:
-                                                                            () async {
-                                                                          logFirebaseEvent(
-                                                                              'SEARCH_PAGE_close_ICN_ON_TAP');
-                                                                          logFirebaseEvent(
-                                                                              'IconButton_alert_dialog');
-                                                                          var confirmDialogResponse = await showDialog<bool>(
-                                                                                context: context,
-                                                                                builder: (alertDialogContext) {
-                                                                                  return AlertDialog(
-                                                                                    title: Text('Delete Entry'),
-                                                                                    content: Text('Are you sure you want to delete this entry?'),
-                                                                                    actions: [
-                                                                                      TextButton(
-                                                                                        onPressed: () => Navigator.pop(alertDialogContext, false),
-                                                                                        child: Text('Cancel'),
-                                                                                      ),
-                                                                                      TextButton(
-                                                                                        onPressed: () => Navigator.pop(alertDialogContext, true),
-                                                                                        child: Text('Confirm'),
-                                                                                      ),
-                                                                                    ],
-                                                                                  );
-                                                                                },
-                                                                              ) ??
-                                                                              false;
-                                                                          if (confirmDialogResponse) {
-                                                                            logFirebaseEvent('IconButton_backend_call');
-                                                                            await listViewSavedPropertiesRecord.reference.delete();
-                                                                          }
-                                                                        },
-                                                                      ),
-                                                                    ],
-                                                                  );
-                                                                  }
-                                                                  // --- Deal alert card (with lightning bolt) ---
-                                                                  final alert = uniqueAlerts[listViewIndex - savedList.length];
-                                                                  return Stack(
-                                                                    alignment: AlignmentDirectional(1.0, -1.0),
-                                                                    children: [
-                                                                      Padding(
-                                                                        padding: EdgeInsetsDirectional.fromSTEB(8.0, 0.0, 8.0, 0.0),
-                                                                        child: InkWell(
-                                                                          splashColor: Colors.transparent,
-                                                                          focusColor: Colors.transparent,
-                                                                          hoverColor: Colors.transparent,
-                                                                          highlightColor: Colors.transparent,
-                                                                          onTap: () async {
-                                                                            // Save deal alert to savedProperties on tap
-                                                                            var savedRef = SavedPropertiesRecord.collection
-                                                                                .doc('${currentUserUid}_${alert.zpid}');
-                                                                            await savedRef.set(
-                                                                              createSavedPropertiesRecordData(
-                                                                                method: alert.method,
-                                                                                impValue: alert.impValue,
-                                                                                futureValue: alert.futureValue,
-                                                                                downPayment: alert.downPayment,
-                                                                                mortgage: alert.mortgage,
-                                                                                sellingCosts: alert.sellingCosts,
-                                                                                totalCosts: alert.totalCosts,
-                                                                                grossReturn: alert.grossReturn,
-                                                                                netReturn: alert.netReturn,
-                                                                                address: alert.address,
-                                                                                imgSrc: alert.imgSrc,
-                                                                                latlng: alert.latlng,
-                                                                                netRoi: alert.netROI,
-                                                                                detailUrl: alert.detailUrl,
-                                                                                bedrooms: alert.bedrooms,
-                                                                                bathrooms: alert.bathrooms,
-                                                                                livingArea: alert.livingArea,
-                                                                                price: alert.price,
-                                                                                zestimate: alert.zestimate,
-                                                                                yearBuilt: alert.yearBuilt,
-                                                                                description: alert.description,
-                                                                                loanAmount: alert.loanAmount,
-                                                                                cashNeeded: alert.cashNeeded,
-                                                                                id: alert.zpid,
-                                                                                userRef: currentUserReference,
-                                                                                lotAreaValue: alert.lotAreaValue,
-                                                                                duration: alert.duration,
-                                                                                notes: '',
-                                                                                notesARV: '',
-                                                                              ),
-                                                                            );
-                                                                            ScaffoldMessenger.of(context).showSnackBar(
-                                                                              SnackBar(
-                                                                                content: Text('Saved ${alert.address}'),
-                                                                                duration: Duration(seconds: 2),
-                                                                              ),
-                                                                            );
-                                                                          },
-                                                                          child: ImageCardWidget(
-                                                                            key: Key('DealAlert_${alert.reference.id}'),
-                                                                            price: alert.price,
-                                                                            address: alert.address,
-                                                                            duration: alert.duration,
-                                                                            method: alert.method,
-                                                                            grossReturn: alert.grossReturn,
-                                                                            totalCosts: alert.totalCosts,
-                                                                            financingCosts: alert.mortgage,
-                                                                            bedrooms: alert.bedrooms,
-                                                                            baths: alert.bathrooms,
-                                                                            livingArea: alert.livingArea,
-                                                                            lotArea: alert.lotAreaValue,
-                                                                            proposedClosedDate: null,
-                                                                            proposedSaleDate: null,
-                                                                            imgSrc: alert.imgSrc,
-                                                                            zpid: alert.zpid,
-                                                                            estimatedValue: alert.futureValue,
-                                                                            downPayment: alert.downPayment,
-                                                                            yearBuilt: alert.yearBuilt,
-                                                                            loanAmount: alert.loanAmount,
-                                                                            detailUrl: alert.detailUrl,
-                                                                            cashNeeded: alert.cashNeeded,
-                                                                            netReturn: alert.netReturn,
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                      // Lightning bolt icon - top right
-                                                                      Padding(
-                                                                        padding: EdgeInsets.all(8.0),
-                                                                        child: Container(
-                                                                          width: 32.0,
-                                                                          height: 32.0,
-                                                                          decoration: BoxDecoration(
-                                                                            color: FlutterFlowTheme.of(context).primary,
-                                                                            shape: BoxShape.circle,
-                                                                          ),
-                                                                          child: Icon(
-                                                                            Icons.bolt,
-                                                                            color: FlutterFlowTheme.of(context).info,
-                                                                            size: 20.0,
-                                                                          ),
-                                                                        ),
-                                                                      ),
-                                                                    ],
-                                                                  );
-                                                                  // --- Loading indicator at bottom ---
-                                                                  if (listViewIndex >= savedList.length + uniqueAlerts.length) {
-                                                                    return Center(
-                                                                      child: Padding(
-                                                                        padding: EdgeInsets.all(16.0),
-                                                                        child: SizedBox(
-                                                                          width: 24.0,
-                                                                          height: 24.0,
-                                                                          child: CircularProgressIndicator(
-                                                                            strokeWidth: 2.0,
-                                                                            valueColor: AlwaysStoppedAnimation<Color>(
-                                                                              FlutterFlowTheme.of(context).secondary,
+                                                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                                                SnackBar(
+                                                                                  content: Text('Saved ${alert.address}'),
+                                                                                  duration: Duration(seconds: 2),
+                                                                                ),
+                                                                              );
+                                                                            },
+                                                                            child:
+                                                                                ImageCardWidget(
+                                                                              key: Key('DealAlert_${alert.reference.id}'),
+                                                                              price: alert.price,
+                                                                              address: alert.address,
+                                                                              duration: alert.duration,
+                                                                              method: alert.method,
+                                                                              grossReturn: alert.grossReturn,
+                                                                              totalCosts: alert.totalCosts,
+                                                                              financingCosts: alert.mortgage,
+                                                                              bedrooms: alert.bedrooms,
+                                                                              baths: alert.bathrooms,
+                                                                              livingArea: alert.livingArea,
+                                                                              lotArea: alert.lotAreaValue,
+                                                                              proposedClosedDate: null,
+                                                                              proposedSaleDate: null,
+                                                                              imgSrc: alert.imgSrc,
+                                                                              zpid: alert.zpid,
+                                                                              estimatedValue: alert.futureValue,
+                                                                              downPayment: alert.downPayment,
+                                                                              yearBuilt: alert.yearBuilt,
+                                                                              loanAmount: alert.loanAmount,
+                                                                              detailUrl: alert.detailUrl,
+                                                                              cashNeeded: alert.cashNeeded,
+                                                                              netReturn: alert.netReturn,
                                                                             ),
                                                                           ),
                                                                         ),
-                                                                      ),
+                                                                        // Lightning bolt icon - top right
+                                                                        Padding(
+                                                                          padding:
+                                                                              EdgeInsets.all(8.0),
+                                                                          child:
+                                                                              Container(
+                                                                            width:
+                                                                                32.0,
+                                                                            height:
+                                                                                32.0,
+                                                                            decoration:
+                                                                                BoxDecoration(
+                                                                              color: FlutterFlowTheme.of(context).primary,
+                                                                              shape: BoxShape.circle,
+                                                                            ),
+                                                                            child:
+                                                                                Icon(
+                                                                              Icons.bolt,
+                                                                              color: FlutterFlowTheme.of(context).info,
+                                                                              size: 20.0,
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      ],
                                                                     );
-                                                                  }
-                                                                  return SizedBox.shrink();
-                                                                },
-                                                              ),
+                                                                    // --- Loading indicator at bottom ---
+                                                                    if (listViewIndex >=
+                                                                        savedList.length +
+                                                                            uniqueAlerts.length) {
+                                                                      return Center(
+                                                                        child:
+                                                                            Padding(
+                                                                          padding:
+                                                                              EdgeInsets.all(16.0),
+                                                                          child:
+                                                                              SizedBox(
+                                                                            width:
+                                                                                24.0,
+                                                                            height:
+                                                                                24.0,
+                                                                            child:
+                                                                                CircularProgressIndicator(
+                                                                              strokeWidth: 2.0,
+                                                                              valueColor: AlwaysStoppedAnimation<Color>(
+                                                                                FlutterFlowTheme.of(context).secondary,
+                                                                              ),
+                                                                            ),
+                                                                          ),
+                                                                        ),
+                                                                      );
+                                                                    }
+                                                                    return SizedBox
+                                                                        .shrink();
+                                                                  },
+                                                                ),
                                                               );
                                                             },
                                                           );
@@ -7918,8 +7997,8 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                   !(_model.selectedFieldSavedProperty !=
                                                                       null) &&
                                                                   (_model.searchFieldTextController1
-                                                                              .text ==
-                                                                          '') &&
+                                                                          .text ==
+                                                                      '') &&
                                                                   (_model
                                                                       .reInvestCalcsCombined
                                                                       .isNotEmpty))
@@ -8192,8 +8271,8 @@ class _SearchWidgetState extends State<SearchWidget>
                                                   coordinates: functions
                                                       .convertListsToLatLng(
                                                           (_model.searchFieldTextController1
-                                                                              .text !=
-                                                                          ''
+                                                                          .text !=
+                                                                      ''
                                                                   ? (_model.choiceChipsValue1 !=
                                                                               null &&
                                                                           _model.choiceChipsValue1 !=
@@ -8340,9 +8419,10 @@ class _SearchWidgetState extends State<SearchWidget>
                                                           .cast<double>()
                                                           .toList()),
                                                   maxZoom: 16.0,
-                                                  properties: _model.searchFieldTextController1
-                                                                  .text !=
-                                                              ''
+                                                  properties: _model
+                                                              .searchFieldTextController1
+                                                              .text !=
+                                                          ''
                                                       ? (_model.choiceChipsValue1 !=
                                                                   null &&
                                                               _model.choiceChipsValue1 !=
@@ -8486,7 +8566,10 @@ class _SearchWidgetState extends State<SearchWidget>
                                                               .reInvestCalcsCombined
                                                               .where((e) =>
                                                                   (zpid ==
-                                                                      e.toString()) &&
+                                                                      getJsonField(
+                                                                        e,
+                                                                        r'''$.zpid''',
+                                                                      ).toString()) &&
                                                                   (method ==
                                                                       getJsonField(
                                                                         e,
@@ -8523,7 +8606,11 @@ class _SearchWidgetState extends State<SearchWidget>
                                                               .convertListsToLatLng(
                                                                   PropertyDetailsStruct.maybeFromMap(_model.reInvestCalcsCombined
                                                                           .where((e) =>
-                                                                              (zpid == e.toString()) &&
+                                                                              (zpid ==
+                                                                                  getJsonField(
+                                                                                    e,
+                                                                                    r'''$.zpid''',
+                                                                                  ).toString()) &&
                                                                               (method ==
                                                                                   getJsonField(
                                                                                     e,
@@ -8536,7 +8623,11 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                       .toList(),
                                                                   PropertyDetailsStruct.maybeFromMap(_model.reInvestCalcsCombined
                                                                           .where((e) =>
-                                                                              (zpid == e.toString()) &&
+                                                                              (zpid ==
+                                                                                  getJsonField(
+                                                                                    e,
+                                                                                    r'''$.zpid''',
+                                                                                  ).toString()) &&
                                                                               (method ==
                                                                                   getJsonField(
                                                                                     e,
@@ -8559,7 +8650,10 @@ class _SearchWidgetState extends State<SearchWidget>
                                                                 .reInvestCalcsCombined
                                                                 .where((e) =>
                                                                     (zpid ==
-                                                                        e.toString()) &&
+                                                                        getJsonField(
+                                                                          e,
+                                                                          r'''$.zpid''',
+                                                                        ).toString()) &&
                                                                     (method ==
                                                                         getJsonField(
                                                                           e,
@@ -9468,7 +9562,8 @@ class _SearchWidgetState extends State<SearchWidget>
                                                             hasIcon: true,
                                                             expandIcon:
                                                                 FontAwesomeIcons
-                                                                    .slidersH.data,
+                                                                    .slidersH
+                                                                    .data,
                                                           ),
                                                         ),
                                                       ),
@@ -9500,9 +9595,10 @@ class _SearchWidgetState extends State<SearchWidget>
                                           ),
                                           child: Builder(
                                             builder: (context) {
-                                              final resultsFromReinvestCalcs = (_model.searchFieldTextController1
-                                                                  .text !=
-                                                              ''
+                                              final resultsFromReinvestCalcs = (_model
+                                                              .searchFieldTextController1
+                                                              .text !=
+                                                          ''
                                                       ? (_model.choiceChipsValue1 !=
                                                                   null &&
                                                               _model.choiceChipsValue1 !=

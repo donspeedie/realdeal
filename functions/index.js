@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const {onRequest} = require("firebase-functions/v2/https");
+const {onRequest, onCall, HttpsError} = require("firebase-functions/v2/https");
 const {onDocumentUpdated, onDocumentCreated} = require("firebase-functions/v2/firestore");
 const {setGlobalOptions} = require("firebase-functions/v2/options");
 const {defineSecret} = require("firebase-functions/params");
@@ -280,6 +280,67 @@ exports.testSimple = onRequest(async (req, res) => {
     message: "Endpoint is working",
     timestamp: new Date().toISOString()
   });
+});
+
+exports.corsProxy = onRequest({
+  region: "us-west1",
+  memory: "256MiB",
+  timeoutSeconds: 60,
+}, async (req, res) => {
+  res.set({
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Max-Age": "3600",
+  });
+
+  if (req.method === "OPTIONS") {
+    return res.status(204).send("");
+  }
+
+  const targetUrl = req.query.url;
+  if (!targetUrl || Array.isArray(targetUrl)) {
+    return res.status(400).json({error: "Missing url query parameter"});
+  }
+
+  let parsedUrl;
+  try {
+    parsedUrl = new URL(targetUrl);
+  } catch (error) {
+    return res.status(400).json({error: "Invalid url query parameter"});
+  }
+
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    return res.status(400).json({error: "Only http and https URLs are supported"});
+  }
+
+  try {
+    const upstream = await fetch(parsedUrl.toString(), {
+      headers: {
+        "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+        "User-Agent": "Mozilla/5.0 getRealDeal.ai image proxy",
+      },
+    });
+
+    if (!upstream.ok) {
+      return res.status(upstream.status).send(`Upstream image request failed: ${upstream.statusText}`);
+    }
+
+    const contentType = upstream.headers.get("content-type") || "application/octet-stream";
+    const body = Buffer.from(await upstream.arrayBuffer());
+    res.set({
+      "Content-Type": contentType,
+      "Cache-Control": "public, max-age=86400",
+    });
+
+    if (req.method === "HEAD") {
+      return res.status(200).send("");
+    }
+    return res.status(200).send(body);
+  } catch (error) {
+    console.error("corsProxy error:", error);
+    return res.status(502).json({error: "Image proxy request failed"});
+  }
 });
 
 exports.cloudCalcs = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
@@ -847,14 +908,12 @@ exports.runDripCampaigns = onSchedule({
 /**
  * Manual trigger for testing
  */
-const {onCall} = require("firebase-functions/v2/https");
-
 exports.triggerDripCampaigns = onCall({
   region: "us-west1",
 }, async (request) => {
   // Require authentication
   if (!request.auth) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "unauthenticated",
       "Must be authenticated to trigger drip campaigns"
     );
@@ -1602,7 +1661,7 @@ exports.updateDealStatus = onCall({
   region: "us-west1",
 }, async (request) => {
   if (!request.auth) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "unauthenticated",
       "Must be authenticated to update deal status",
     );
@@ -1610,7 +1669,7 @@ exports.updateDealStatus = onCall({
 
   const {dealId, newStatus} = request.data;
   if (!dealId || !newStatus) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "invalid-argument",
       "dealId and newStatus are required",
     );
@@ -1621,7 +1680,7 @@ exports.updateDealStatus = onCall({
   const doc = await docRef.get();
 
   if (!doc.exists) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "not-found",
       `Deal alert ${dealId} not found`,
     );
@@ -1631,7 +1690,7 @@ exports.updateDealStatus = onCall({
   const allowed = VALID_TRANSITIONS[currentStatus];
 
   if (!allowed || !allowed.includes(newStatus)) {
-    throw new functions.https.HttpsError(
+    throw new HttpsError(
       "failed-precondition",
       `Cannot transition from "${currentStatus}" to "${newStatus}". ` +
       `Allowed: ${(allowed || []).join(", ") || "none"}`,
