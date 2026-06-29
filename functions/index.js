@@ -1133,6 +1133,12 @@ exports.scanDealsDaily = onSchedule({
   console.log("[DealScanner] Starting daily scan...");
   const db = admin.firestore();
 
+  // [2026-06-29] Outbound scan emails disabled per Don. The RealDeal scan
+  // "canary" and "BuyBox Match" digest emails are retired. The scan itself
+  // still runs and writes dealAlerts/scanHealth for the app — only the two
+  // notification emails are suppressed. Set to true to re-enable both emails.
+  const EMAIL_NOTIFICATIONS_ENABLED = false;
+
   // 1. Load active scan configs
   const configsSnap = await db.collection("scanConfigs")
     .where("active", "==", true).get();
@@ -1285,7 +1291,7 @@ exports.scanDealsDaily = onSchedule({
 
     if (persistentZeroMarkets.length > 0) {
       console.error(`[DealScanner][CANARY] Persistent 0-result markets (>=2 scans): ${persistentZeroMarkets.join(", ")}`);
-      for (const email of notifyEmails) {
+      for (const email of (EMAIL_NOTIFICATIONS_ENABLED ? notifyEmails : [])) {
         await db.collection("mail").add({
           to: email,
           message: {
@@ -1401,7 +1407,7 @@ exports.scanDealsDaily = onSchedule({
       </div>
     `;
 
-    for (const email of notifyEmails) {
+    for (const email of (EMAIL_NOTIFICATIONS_ENABLED ? notifyEmails : [])) {
       await db.collection("mail").add({
         to: email,
         message: {
@@ -1410,7 +1416,7 @@ exports.scanDealsDaily = onSchedule({
         },
       });
     }
-    console.log(`[DealScanner] Digest sent to ${notifyEmails.size} recipient(s).`);
+    console.log(`[DealScanner] Digest: ${EMAIL_NOTIFICATIONS_ENABLED ? `sent to ${notifyEmails.size} recipient(s)` : "email disabled, not sent"}.`);
   }
 
   console.log(`[DealScanner] Complete. ${allDeals.length} qualifying deals from ${configsSnap.size} markets.`);
