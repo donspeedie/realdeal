@@ -14,8 +14,14 @@ const _kPrivateApiFunctionName = 'ffPrivateStripeApiCalls';
 /// Start Firebase Cloud Functions Group Code
 
 class FirebaseCloudFunctionsGroup {
-  static String getBaseUrl() =>
-      'https://us-west1-habu-1gxak2.cloudfunctions.net/';
+  static String getBaseUrl() {
+    if (kIsWeb &&
+        (Uri.base.host == 'localhost' || Uri.base.host == '127.0.0.1')) {
+      return 'http://127.0.0.1:5181';
+    }
+    return 'https://us-west1-habu-1gxak2.cloudfunctions.net';
+  }
+
   static Map<String, String> headers = {};
   static CloudCalcsCall cloudCalcsCall = CloudCalcsCall();
 }
@@ -550,7 +556,6 @@ class CreateCustomerCall {
 
 /// End Stripe APIs Group Code
 
-
 class GETZestimateCall {
   static Future<ApiCallResponse> call({
     String? zpid = '',
@@ -585,8 +590,7 @@ class GETPptyDetailsCall {
   }) async {
     return ApiManager.instance.makeApiCall(
       callName: 'GET PptyDetails',
-      apiUrl:
-          'https://us-west1-habu-1gxak2.cloudfunctions.net/propertyDetails',
+      apiUrl: 'https://us-west1-habu-1gxak2.cloudfunctions.net/propertyDetails',
       callType: ApiCallType.GET,
       headers: {},
       params: {
@@ -611,7 +615,6 @@ class GETPptyDetailsCall {
         r'''$.description''',
       ));
 }
-
 
 class ApiPagingParams {
   int nextPageNumber = 0;

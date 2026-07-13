@@ -93,7 +93,7 @@ export interface EngagementEvent {
 
     // Generic
     notes?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   // User tracking

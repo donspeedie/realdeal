@@ -143,7 +143,9 @@ async function runScan() {
                 try {
                   const dealInput = mapStrategyResultToDeal(props[i], r);
                   dealScore = scoreDeal(dealInput);
-                } catch (e) {}
+                } catch (e) {
+                  console.warn("Deal scoring failed:", e);
+                }
 
                 const deal = {
                   ...r,

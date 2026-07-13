@@ -1,7 +1,7 @@
 {
   "hosting": {
     "site": "getrealdeal-landing",
-    "public": "dist",
+    "public": "habu-proxy-public",
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -10,7 +10,10 @@
     "rewrites": [
       {
         "source": "**",
-        "destination": "/index.html"
+        "run": {
+          "serviceId": "habu-service",
+          "region": "us-west1"
+        }
       }
     ]
   }

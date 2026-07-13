@@ -19,7 +19,7 @@ const MAIL_COLLECTION = 'mail';
 
 export interface EmailTemplate {
   templateId: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 }
 
 export interface EmailOptions {
@@ -38,6 +38,23 @@ export interface EmailOptions {
   }>;
 }
 
+type MailDocument = {
+  to: string[];
+  cc?: string[];
+  bcc?: string[];
+  replyTo?: string;
+  message: {
+    subject?: string;
+    text?: string;
+    html?: string;
+    attachments?: EmailOptions['attachments'];
+  };
+  template?: {
+    name: string;
+    data: Record<string, unknown>;
+  };
+};
+
 /**
  * Send email via SendGrid (through Firebase Extension)
  *
@@ -47,7 +64,7 @@ export async function sendEmail(options: EmailOptions): Promise<string> {
   const {to, cc, bcc, subject, text, html, template, replyTo, attachments} = options;
 
   // Build email document
-  const emailDoc: any = {
+  const emailDoc: MailDocument = {
     to: Array.isArray(to) ? to : [to],
     message: {
       subject,
@@ -92,7 +109,7 @@ export async function sendEmail(options: EmailOptions): Promise<string> {
 export async function sendTemplatedEmail(
   to: string,
   templateId: string,
-  templateData: Record<string, any>,
+  templateData: Record<string, unknown>,
   options?: {
     userId?: string;
     trackEngagement?: boolean;
