@@ -12,6 +12,7 @@ const oaDataApiUrl = defineSecret("OA_DATA_API_URL");
 const hubspotApiKey = defineSecret("HUBSPOT_API_KEY");
 const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
 const {initSSE} = require("./sseWriter");
+const {requireFirebaseAuth} = require("./authGuard");
 const {fetchZillowDataWithCache} = require("./oaDataApi");
 const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
@@ -762,6 +763,8 @@ exports.testGA4Sync = onRequest({
   if (req.method === "OPTIONS") {
     return res.status(204).send("");
   }
+
+  if (!(await requireFirebaseAuth(req, res))) return;
 
   console.log("🧪 Manual GA4 sync test started");
 
