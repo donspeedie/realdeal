@@ -14,7 +14,7 @@ const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
 const {initSSE} = require("./sseWriter");
 const {requireFirebaseAuth} = require("./authGuard");
 const {safeKeys} = require("./logSafety");
-const {fetchZillowDataWithCache} = require("./oaDataApi");
+const {fetchZillowDataWithCache, isValidLocation} = require("./oaDataApi");
 const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
 const {scoreDeal, mapStrategyResultToDeal} = require("./dealScoringEngine");
@@ -213,8 +213,8 @@ exports.cloudCalcsSync = onRequest({secrets: [oaDataApiUrl]}, async (req, res) =
   if (params.newDuration && !params.newBuildDuration) params.newBuildDuration = params.newDuration;
   if (params.vacanyRate && !params.vacancyRate) params.vacancyRate = params.vacanyRate;
 
-  if (!params.location) {
-    return res.status(400).json({error: "Missing required 'location' parameter"});
+  if (!isValidLocation(params.location)) {
+    return res.status(400).json({error: "Missing or invalid 'location' parameter"});
   }
 
   try {
@@ -365,9 +365,9 @@ exports.cloudCalcs = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
   console.log(`🏠 Location parameter: ${params.location || 'NOT PROVIDED'}`);
   console.log(`⚙️ Parameter keys:`, safeKeys(params));
 
-  if (!params.location) {
-    console.log(`❌ ERROR: Missing required 'location' parameter`);
-    writeEvent("error", {error: "Missing required 'location' parameter"});
+  if (!isValidLocation(params.location)) {
+    console.log(`❌ ERROR: Missing or invalid 'location' parameter`);
+    writeEvent("error", {error: "Missing or invalid 'location' parameter"});
     return end();
   }
 

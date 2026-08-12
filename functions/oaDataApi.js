@@ -31,6 +31,29 @@ function normalizeLocation(location) {
   return city || location;
 }
 
+const MAX_LOCATION_LENGTH = 200;
+// City/state/zip style text only — letters, digits, whitespace, and the
+// punctuation that appears in real location strings ("St. Louis", "O'Fallon",
+// "Winston-Salem", "95201-1234").
+const LOCATION_PATTERN = /^[\w\s,.'-]+$/;
+
+/**
+ * Validate a location value before it is forwarded to the OA Data API.
+ *
+ * Callers (cloudCalcs, cloudCalcsSync) accept `location` straight from the
+ * HTTP request body and pass it into an outbound API call — this is the
+ * trust boundary the value must be checked at (CWE-20).
+ *
+ * @param {*} location - Raw value from request input.
+ * @returns {boolean} True if location is a non-empty, bounded, well-formed string.
+ */
+function isValidLocation(location) {
+  if (typeof location !== "string") return false;
+  const trimmed = location.trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_LOCATION_LENGTH) return false;
+  return LOCATION_PATTERN.test(trimmed);
+}
+
 /**
  * Replaces fetchZillowDataWithCache from zillowApi.js.
  * Routes to OA Data API based on endpoint name.
@@ -212,4 +235,5 @@ module.exports = {
   fetchMarketSignal,
   fetchDistressCheck,
   normalizeLocation,
+  isValidLocation,
 };
