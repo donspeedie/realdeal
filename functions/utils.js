@@ -48,8 +48,27 @@ const appendZillowUrl = (url) => {
   return encodeURI(`https://www.zillow.com${url.startsWith("/") ? url : "/" + url}`);
 };
 
+// Absolute server-side ceilings for cloudCalcs pagination/property caps.
+// Client-supplied maxPages/maxProperties are honored only up to these limits,
+// so a caller cannot force unbounded upstream fetches or batch processing.
+const MAX_ALLOWED_PAGES = 1000;
+const MAX_ALLOWED_PROPERTIES = 10000;
+
+const resolveProcessingLimits = (params = {}) => {
+  const requestedPages = Number(params.maxPages);
+  const requestedProperties = Number(params.maxProperties);
+  const maxPages = Number.isFinite(requestedPages) && requestedPages > 0 ?
+    Math.min(requestedPages, MAX_ALLOWED_PAGES) : MAX_ALLOWED_PAGES;
+  const maxProperties = Number.isFinite(requestedProperties) && requestedProperties > 0 ?
+    Math.min(requestedProperties, MAX_ALLOWED_PROPERTIES) : MAX_ALLOWED_PROPERTIES;
+  return {maxPages, maxProperties};
+};
+
 module.exports = {
   analyzeDescription,
   calculateBedroomPriceAverages,
   appendZillowUrl,
+  resolveProcessingLimits,
+  MAX_ALLOWED_PAGES,
+  MAX_ALLOWED_PROPERTIES,
 };

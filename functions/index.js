@@ -17,6 +17,7 @@ const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
 const {scoreDeal, mapStrategyResultToDeal} = require("./dealScoringEngine");
 const {createFluidCMProject} = require("./fluidcmHandoff");
+const {resolveProcessingLimits} = require("./utils");
 
 if (admin.apps.length === 0) admin.initializeApp();
 
@@ -394,8 +395,9 @@ exports.cloudCalcs = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
 
   let page = 1;
   let totalProcessed = 0;
-  const MAX_PAGES = params.maxPages || 1000; // Allow up to 1000 pages (or user-specified)
-  const MAX_PROPERTIES = params.maxProperties || 10000; // Process up to 10,000 properties (or user-specified)
+  // Client may request smaller maxPages/maxProperties, but cannot exceed the
+  // hard server-side ceilings in resolveProcessingLimits (CWE-770 guard).
+  const {maxPages: MAX_PAGES, maxProperties: MAX_PROPERTIES} = resolveProcessingLimits(params);
   const BATCH_SIZE = 20; // Process properties in batches of 10
   let totalPages = 1;
   let batchCount = 0;
