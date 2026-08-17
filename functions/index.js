@@ -185,7 +185,7 @@ setGlobalOptions({
   memory: "2GiB",
   timeoutSeconds: 540,
   concurrency: 50,
-  minInstances: 1,
+  minInstances: 0,
 });
 
 // Non-streaming endpoint for FlutterFlow compatibility
@@ -261,25 +261,6 @@ exports.cloudCalcsSync = onRequest({secrets: [oaDataApiUrl]}, async (req, res) =
       details: error.message
     });
   }
-});
-
-// Simple test endpoint
-exports.testSimple = onRequest(async (req, res) => {
-  res.set({
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  });
-
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
-
-  return res.status(200).json({
-    success: true,
-    message: "Endpoint is working",
-    timestamp: new Date().toISOString()
-  });
 });
 
 exports.corsProxy = onRequest({
@@ -741,113 +722,6 @@ exports.syncGA4DataDaily = onSchedule({
   } catch (error) {
     console.error("❌ Error syncing GA4 data:", error);
     throw error; // Let Cloud Functions retry
-  }
-});
-
-/**
- * Manual trigger function: Test GA4 sync on-demand
- * Call this via HTTP to test the sync process
- */
-exports.testGA4Sync = onRequest({
-  region: "us-west1",
-  memory: "256MiB",
-  timeoutSeconds: 300,
-}, async (req, res) => {
-  res.set({
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  });
-
-  if (req.method === "OPTIONS") {
-    return res.status(204).send("");
-  }
-
-  console.log("🧪 Manual GA4 sync test started");
-
-  try {
-    // Get config from environment variables or request body
-    const GA4_PROPERTY_ID = req.body?.propertyId || process.env.GA4_PROPERTY_ID;
-    const GA4_SERVICE_ACCOUNT_PATH = process.env.GA4_SERVICE_ACCOUNT_PATH || "./ga4-service-account.json";
-    const DEFAULT_USER_ID = req.body?.userId || process.env.DEFAULT_USER_ID || "default_user";
-    const startDate = req.body?.startDate || "yesterday";
-    const endDate = req.body?.endDate || "yesterday";
-
-    if (!GA4_PROPERTY_ID) {
-      return res.status(400).json({error: "GA4_PROPERTY_ID not provided"});
-    }
-
-    // Initialize GA4 client
-    console.log("📊 Initializing GA4 client...");
-    initializeGA4Client(GA4_SERVICE_ACCOUNT_PATH);
-
-    // Test connection first
-    console.log("🔌 Testing GA4 connection...");
-    const connectionTest = await testConnection(GA4_PROPERTY_ID);
-
-    if (!connectionTest.success) {
-      return res.status(500).json({
-        error: "Failed to connect to GA4",
-        details: connectionTest.error,
-      });
-    }
-
-    // Fetch data
-    console.log(`📥 Fetching GA4 data from ${startDate} to ${endDate}...`);
-    const [landingPageEvents, conversionEvents] = await Promise.all([
-      fetchLandingPageEvents(GA4_PROPERTY_ID, startDate, endDate),
-      fetchConversionEvents(GA4_PROPERTY_ID, startDate, endDate),
-    ]);
-
-    const allGA4Events = [...landingPageEvents, ...conversionEvents];
-    console.log(`✅ Fetched ${allGA4Events.length} GA4 events`);
-
-    // Transform
-    console.log("🔄 Transforming GA4 events...");
-    let engagements = transformGA4Batch(allGA4Events, DEFAULT_USER_ID);
-    engagements = deduplicateEngagements(engagements);
-    engagements = aggregatePageViews(engagements);
-    engagements = filterLowValueEvents(engagements);
-
-    console.log(`✅ Transformed to ${engagements.length} engagement events`);
-
-    // Write to Firestore (unless dryRun mode)
-    const dryRun = req.body?.dryRun || false;
-
-    if (!dryRun) {
-      console.log("💾 Writing to Firestore...");
-      const db = admin.firestore();
-      const batch = db.batch();
-
-      engagements.forEach((engagement) => {
-        const docRef = db.collection("engagements").doc();
-        batch.set(docRef, engagement);
-      });
-
-      await batch.commit();
-      console.log(`✅ Successfully wrote ${engagements.length} engagements to Firestore`);
-    } else {
-      console.log("🏃 Dry run mode - skipping Firestore write");
-    }
-
-    // Return results
-    return res.status(200).json({
-      success: true,
-      connection: connectionTest,
-      ga4Events: allGA4Events.length,
-      engagementsCreated: engagements.length,
-      dryRun,
-      sampleEngagements: engagements.slice(0, 5), // Show first 5 for preview
-      timestamp: new Date().toISOString(),
-    });
-
-  } catch (error) {
-    console.error("❌ Error testing GA4 sync:", error);
-    return res.status(500).json({
-      error: "Failed to test GA4 sync",
-      details: error.message,
-      stack: error.stack,
-    });
   }
 });
 
