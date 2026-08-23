@@ -12,6 +12,7 @@ const oaDataApiUrl = defineSecret("OA_DATA_API_URL");
 const hubspotApiKey = defineSecret("HUBSPOT_API_KEY");
 const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
 const {initSSE} = require("./sseWriter");
+const {requireFirebaseAuth} = require("./authGuard");
 const {fetchZillowDataWithCache} = require("./oaDataApi");
 const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
@@ -200,6 +201,8 @@ exports.cloudCalcsSync = onRequest({secrets: [oaDataApiUrl]}, async (req, res) =
     return res.status(204).send("");
   }
 
+  if (!(await requireFirebaseAuth(req, res))) return;
+
   const params = req.body || {};
 
   // Map Flutter field names to strategyCalculator param names
@@ -343,6 +346,8 @@ exports.cloudCalcs = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
     });
     return res.status(204).send("");
   }
+
+  if (!(await requireFirebaseAuth(req, res))) return;
 
   const {writeEvent, end, keepAlive} = initSSE(res);
   const params = req.body || {};
@@ -505,6 +510,8 @@ exports.hubspotTrackCalculation = onRequest({secrets: [hubspotApiKey]}, async (r
     return res.status(204).send("");
   }
 
+  if (!(await requireFirebaseAuth(req, res))) return;
+
   try {
     const {email, firstName, lastName, phone, address, method} = req.body;
 
@@ -556,6 +563,8 @@ exports.hubspotCreateContact = onRequest({secrets: [hubspotApiKey]}, async (req,
     return res.status(204).send("");
   }
 
+  if (!(await requireFirebaseAuth(req, res))) return;
+
   try {
     const {email, firstName, lastName, phone, customProperties} = req.body;
 
@@ -597,6 +606,8 @@ exports.hubspotFindContact = onRequest({secrets: [hubspotApiKey]}, async (req, r
   if (req.method === "OPTIONS") {
     return res.status(204).send("");
   }
+
+  if (!(await requireFirebaseAuth(req, res))) return;
 
   try {
     const email = req.body?.email || req.query?.email;
