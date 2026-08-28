@@ -13,6 +13,7 @@ const hubspotApiKey = defineSecret("HUBSPOT_API_KEY");
 const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
 const {initSSE} = require("./sseWriter");
 const {requireFirebaseAuth} = require("./authGuard");
+const {safeKeys} = require("./logSafety");
 const {fetchZillowDataWithCache} = require("./oaDataApi");
 const {processProperty} = require("./propertyProcessor");
 const {trackPropertyCalculation, createOrUpdateContact, findContactByEmail} = require("./hubspotIntegration");
@@ -333,9 +334,11 @@ exports.cloudCalcs = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
   console.log(`\n🚀 REQUEST ${requestId} STARTED`);
   console.log(`📋 Method: ${req.method}`);
   console.log(`🌐 URL: ${req.url}`);
-  console.log(`📨 Headers:`, JSON.stringify(req.headers, null, 2));
-  console.log(`📦 Body:`, JSON.stringify(req.body, null, 2));
-  console.log(`🔍 Query:`, JSON.stringify(req.query, null, 2));
+  // CWE-532: never log raw headers/body/query — they can carry auth tokens,
+  // cookies, or user-supplied data. Log field names only.
+  console.log(`📨 Header keys:`, safeKeys(req.headers));
+  console.log(`📦 Body keys:`, safeKeys(req.body));
+  console.log(`🔍 Query keys:`, safeKeys(req.query));
 
   if (req.method === "OPTIONS") {
     console.log(`✅ Handling CORS preflight request`);
@@ -360,7 +363,7 @@ exports.cloudCalcs = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
   if (params.vacanyRate && !params.vacancyRate) params.vacancyRate = params.vacanyRate;
 
   console.log(`🏠 Location parameter: ${params.location || 'NOT PROVIDED'}`);
-  console.log(`⚙️ All parameters:`, JSON.stringify(params, null, 2));
+  console.log(`⚙️ Parameter keys:`, safeKeys(params));
 
   if (!params.location) {
     console.log(`❌ ERROR: Missing required 'location' parameter`);
