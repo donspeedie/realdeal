@@ -3,7 +3,10 @@
 // unauthenticated callers before touching any secret-backed integration
 // (OA Data API / HubSpot), while still answering CORS preflight without auth.
 
-jest.mock("../oaDataApi", () => ({fetchZillowDataWithCache: jest.fn()}));
+jest.mock("../oaDataApi", () => ({
+  fetchZillowDataWithCache: jest.fn(),
+  isValidLocation: jest.fn((loc) => typeof loc === "string" && loc.trim().length > 0),
+}));
 jest.mock("../propertyProcessor", () => ({processProperty: jest.fn()}));
 jest.mock("../hubspotIntegration", () => ({
   trackPropertyCalculation: jest.fn(),
