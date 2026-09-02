@@ -30,6 +30,18 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+// Google Maps API key — never committed to VCS (P0 finding 2026-06-10).
+// Resolution order: local.properties (gmaps.apiKey) > gradle property
+// (-PGMAPS_API_KEY=...) > env var GMAPS_API_KEY > empty string (debug
+// builds still compile; maps just won't render without a key).
+def gmapsApiKey = localProperties.getProperty('gmaps.apiKey')
+if (gmapsApiKey == null && project.hasProperty('GMAPS_API_KEY')) {
+    gmapsApiKey = project.property('GMAPS_API_KEY')
+}
+if (gmapsApiKey == null) {
+    gmapsApiKey = System.getenv('GMAPS_API_KEY') ?: ''
+}
+
 android {
     namespace "com.mycompany.habu"
     compileSdkVersion 35
@@ -61,6 +73,7 @@ android {
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        manifestPlaceholders += [GMAPS_API_KEY: gmapsApiKey]
     }
 
    signingConfigs {
