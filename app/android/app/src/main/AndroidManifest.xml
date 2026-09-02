@@ -55,7 +55,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-        <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyBJDJQZEJh6kRfdslUQ8uEbzVsRSW-WwFc"/>
+        <!-- Injected at build time via manifestPlaceholders (see app/build.gradle).
+             Supply via GMAPS_API_KEY env var, -PGMAPS_API_KEY gradle property,
+             or gmaps.apiKey in local.properties. Never commit the key here. -->
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="${GMAPS_API_KEY}"/>
 
 
 
