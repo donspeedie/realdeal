@@ -2,105 +2,63 @@
 
 ## Overview
 
-`exports.cloudCalcs` in `functions/index.js` is a public, unauthenticated Firebase Cloud Function that paginates through a property search and lets the client specify `maxPages` and `maxProperties` in the request body. Prior to this fix, those values had only a falsy-fallback default (`params.maxPages || 1000`) and no upper bound, so a crafted request could force unbounded upstream API fetches and batch processing (CWE-770, QE #8160). This doc covers the fix: a hard server-side clamp via `resolveProcessingLimits()`.
+This run investigated one QE-flagged CWE-770 (Allocation of Resources Without Limits or Throttling) finding in RealDeal's `functions/index.js` and determined it to be a stale duplicate of an already-remediated finding rather than a live vulnerability. No production code was changed; this doc records the investigation trail and the existing guard that already covers this threat class, so a future scan of the same fingerprint family doesn't trigger duplicate remediation work.
 
 ## Setup
 
-No new dependencies, environment variables, or config were introduced. Standard RealDeal Functions dev setup applies:
-
-- Node 20.x
-- `cd functions && npm install`
-- Tests run via Jest: `npm test` (repo root `functions/` directory)
-- The function still requires the existing `oaDataApiUrl` secret binding (`onRequest({secrets: [oaDataApiUrl]}, ...)`) — unchanged by this fix.
+- Repository: `realdeal` (Firebase Cloud Functions backend, Node 20)
+- Working tree used for this run: `C:\Dev\nightshift-workdirs\RealDeal-grd-qe-cwe770-ef50-fce4c399`
+- Prerequisites: Node 20.x, `npm install` run in `functions/` (standard project setup — no new dependencies were introduced by this run)
+- Required smoke command: `npm test -- --watchAll=false --passWithNoTests` (run from `functions/`)
+- Relevant prior commit: `8e3c4b3` — "[NightShift] GRD-QE-CWE770-56F3" (PR #20, merged 2026-08-23) — this is the commit that actually fixed the underlying bug class referenced by this run's finding.
 
 ## Implementation Details
 
-### `functions/utils.js` (new code, lines 50–74)
+No files were created or modified in this run. For maintainers, here's what already exists and why this finding didn't require touching it:
 
-Added two constants and one helper function, exported alongside the existing utility functions:
+- **`functions/utils.js`** — contains `resolveProcessingLimits()`, added in commit `8e3c4b3`. This function takes client-supplied `maxPages`/`maxProperties` values and clamps them to hard server-side ceilings:
+  - `MAX_ALLOWED_PAGES = 1000`
+  - `MAX_ALLOWED_PROPERTIES = 10000`
+  - It rejects non-numeric or non-positive input and falls back to safe defaults, rather than trusting `params.maxPages || 1000`-style fallbacks (which only guard against falsy values, not against arbitrarily large ones).
 
-```js
-const MAX_ALLOWED_PAGES = 1000;
-const MAX_ALLOWED_PROPERTIES = 10000;
+- **`functions/index.js:389`** — `exports.cloudCalcs` calls `resolveProcessingLimits()` before entering its pagination loop, with an inline `CWE-770 guard` comment marking why it's there. This is the enforcement point: no matter what a caller passes in the request body/query, the effective pagination limits used by the loop are clamped server-side.
 
-const resolveProcessingLimits = (params = {}) => {
-  const requestedPages = Number(params.maxPages);
-  const requestedProperties = Number(params.maxProperties);
-  const maxPages = Number.isFinite(requestedPages) && requestedPages > 0 ?
-    Math.min(requestedPages, MAX_ALLOWED_PAGES) : MAX_ALLOWED_PAGES;
-  const maxProperties = Number.isFinite(requestedProperties) && requestedProperties > 0 ?
-    Math.min(requestedProperties, MAX_ALLOWED_PROPERTIES) : MAX_ALLOWED_PROPERTIES;
-  return {maxPages, maxProperties};
-};
+- **`functions/index.js:260`** — the line cited by this run's finding (QE #8206). In the *current* codebase this line sits inside `exports.cloudCalcsSync`, an unrelated function that formats a JSON response — it is not part of the pagination logic at all. The scanner's evidence text was a verbatim match for the pre-fix `cloudCalcs` code that existed before commit `8e3c4b3`, at a line number that has since shifted because of that same fix. This is the key signal that identified the finding as stale rather than new.
 
-module.exports = {
-  analyzeDescription,
-  calculateBedroomPriceAverages,
-  appendZillowUrl,
-  resolveProcessingLimits,
-  MAX_ALLOWED_PAGES,
-  MAX_ALLOWED_PROPERTIES,
-};
-```
-
-Logic: `Number(params.maxPages)` coerces the input (handles strings, `undefined`, garbage). If the result is finite and positive, it's clamped to the ceiling with `Math.min`. Anything else (non-numeric, zero, negative, `NaN`) falls back to the full default ceiling — i.e., "no valid limit requested" is treated the same as "no limit requested at all," not as an error condition.
-
-### `functions/index.js` (modified, around line 397–406)
-
-`resolveProcessingLimits` is imported at the top of the file (line 20: `const {resolveProcessingLimits} = require("./utils");`) and called inside `cloudCalcs`, replacing the two unclamped fallback assignments:
-
-```js
-let page = 1;
-let totalProcessed = 0;
-// Client may request smaller maxPages/maxProperties, but cannot exceed the
-// hard server-side ceilings in resolveProcessingLimits (CWE-770 guard).
-const {maxPages: MAX_PAGES, maxProperties: MAX_PROPERTIES} = resolveProcessingLimits(params);
-const BATCH_SIZE = 20;
-let totalPages = 1;
-```
-
-The rest of the function (the `while (page <= totalPages && totalProcessed < MAX_PROPERTIES)` loop, batch processing, event streaming) is unchanged — only the source of `MAX_PAGES`/`MAX_PROPERTIES` changed, from an unbounded client-controlled value to a clamped one.
-
-### `functions/tests/resolveProcessingLimits.test.js` (new file, 4 tests)
-
-Targeted regression suite, imports `resolveProcessingLimits`, `MAX_ALLOWED_PAGES`, `MAX_ALLOWED_PROPERTIES` directly from `../utils.js`:
-
-| Test | Input | Expected |
-|---|---|---|
-| Defaults | `{}` | `{maxPages: 1000, maxProperties: 10000}` |
-| Honors smaller request | `{maxPages: 2, maxProperties: 5}` | `{maxPages: 2, maxProperties: 5}` |
-| Clamps oversized request | `{maxPages: 999999999, maxProperties: 999999999}` | `{maxPages: 1000, maxProperties: 10000}` |
-| Rejects invalid input | `{maxPages: 0, maxProperties: -5}` and `{maxPages: 'unlimited', maxProperties: 'all'}` | both fall back to `{maxPages: 1000, maxProperties: 10000}` |
-
-The "clamps oversized request" case is the direct regression test for QE #8160 — it's the scenario that would have passed straight through under the old `params.maxPages || 1000` fallback.
+- **`functions/tests/resolveProcessingLimits.test.js`** — pre-existing regression suite (shipped with `8e3c4b3`) exercising:
+  1. Default limits when no client values are supplied.
+  2. Honoring a smaller-than-ceiling client-requested value.
+  3. Clamping a client value above the ceiling back down to the ceiling.
+  4. Rejecting non-numeric / non-positive input.
 
 ## Configuration
 
-No config files, env vars, or Firebase settings changed. The two ceiling constants (`MAX_ALLOWED_PAGES = 1000`, `MAX_ALLOWED_PROPERTIES = 10000`) are hardcoded in `functions/utils.js` rather than sourced from environment/config, matching the values that were already the implicit defaults before the fix. If these need to change (e.g., upstream API quota changes), edit the constants directly — there is no external override mechanism, by design (an override mechanism would reopen the same class of finding if it were client-controllable).
+No new configuration, environment variables, or secrets were introduced. The existing ceilings (`MAX_ALLOWED_PAGES = 1000`, `MAX_ALLOWED_PROPERTIES = 10000`) are hardcoded constants in `functions/utils.js` rather than environment-configurable — if a future requirement needs these tunable per-environment, that would be a separate, deliberate change with its own review, not something to bolt on opportunistically during a QE pass.
 
 ## Gotchas & Nuances
 
-- **`||` vs `Math.min` clamp**: The bug wasn't "no default" — it was that `||` only guards against falsy values (`0`, `undefined`, `null`, `''`), not against values that are too large. Any fix to this class of bug needs an explicit upper-bound comparison, not just a fallback default. Watch for the same `x || default` pattern elsewhere in the codebase if auditing for similar issues.
-- **Zero is treated as invalid, not as "no properties wanted"**: `resolveProcessingLimits({maxPages: 0, ...})` returns the *default* (1000), not 0. This matches the pre-existing behavior (`0 || 1000` also evaluated to 1000) — it was a deliberate choice to preserve behavior rather than introduce a new "request zero pages" semantic that didn't previously exist.
-- **String numbers are accepted**: `Number('5')` is finite, so `{maxPages: '5'}` clamps to 5, not to the default. Only non-numeric strings (`'unlimited'`, `'all'`) fall through to `NaN` and hit the default branch. If the client sends `"5"` via a form field, this still works correctly.
-- **`cloudCalcsSync` was not touched**: This sibling endpoint already self-limits to 1 page / 5 properties with no client override at all — it was used as corroborating evidence that the finding was a true positive (the codebase's own convention is that client input shouldn't set the ceiling), but its code was not modified since it was never vulnerable.
-- **No auth/rate-limiting added**: `cloudCalcs` remains a public, unauthenticated endpoint. This fix only bounds the cost of a *single* request; it does not prevent repeated requests at the capped ceiling. If you're extending this function, don't assume the endpoint is otherwise hardened — see the TODO in the overnight report about App Check / Firestore-based throttling.
-- **Function-level `concurrency: 50`** (set in the `onRequest` options) is a separate, pre-existing guard that limits simultaneous invocations of the function overall — it does not bound the resource cost of any single invocation, which is what this fix addresses. Don't conflate the two when reasoning about this endpoint's limits.
+- **Stale scanner fingerprints look like new findings.** QE #8206's evidence block was a byte-for-byte match for code that was deleted/replaced six days earlier. If you're triaging a CWE-770 (or any) finding, always diff the evidence text against the *current* file content at the cited location before assuming it's live — a scanner running against a slightly stale snapshot, or re-fingerprinting after a line-number shift, can resurrect an already-fixed bug as a "new" ticket.
+- **Line numbers move.** The cited line (260) no longer corresponds to the function named in the evidence (`cloudCalcs`) — it now falls inside `cloudCalcsSync`. Don't trust the line number in isolation; confirm which function actually contains it.
+- **`|| defaultValue` is not a throttle.** The original vulnerable pattern (`params.maxPages || 1000`) is a common anti-pattern that looks like it sets a safe default but does nothing to stop a caller from supplying a huge explicit value. The real fix is an explicit ceiling clamp (`Math.min(requested, MAX_ALLOWED)`), which is what `resolveProcessingLimits()` does — worth grepping for the `||`-only pattern elsewhere in the codebase if similar CWE-770 findings appear against other endpoints.
+- **Internal config callers are out of scope.** `trigger-scan.js` and `seed-scanconfigs.js` also reference `maxPages`/`maxProperties`-style values, but those are populated from server-side scheduled-scan configuration, not attacker-controlled HTTP request parameters — they were reviewed and confirmed out of scope for this CWE-770 finding rather than silently ignored.
+- **No PR was opened.** The standard completion criterion for these QE-repair runs includes a draft PR; that step was skipped here because there was no code diff to open a PR against. If your process requires an audit-trail PR even for declined false positives, that's a process gap to close separately (see the report's "Questions for Review").
 
 ## Testing
 
-Targeted test:
-```
+Run the targeted regression test:
+
+```bash
+cd functions
 npx jest tests/resolveProcessingLimits.test.js --watchAll=false
 ```
-Expected: 1 suite, 4 tests, all passing.
+Expected: 1 suite, 4 tests passing.
 
-Repo smoke command (required by the QE repair completion standard):
-```
+Run the full repo smoke command:
+
+```bash
+cd functions
 npm test -- --watchAll=false --passWithNoTests
 ```
-Expected: 3 suites, 13 tests, 0 failures (includes the 4 new regression tests plus the pre-existing suite).
+Expected: 7 suites, 46 tests passing (as of this run).
 
-Both were run and passed as of commit `9c9ca96` on branch `nightshift/grd-qe-cwe770-56f3-b5195d65`.
-
-**Known gaps**: No integration/emulator-level test exercises `cloudCalcs` end-to-end through the Firebase emulator with an actual oversized request — the regression coverage is at the unit level (`resolveProcessingLimits` in isolation), not a full HTTP-level test of the deployed function. If deeper coverage is wanted, add a Firebase Functions emulator test that POSTs `{maxPages: 999999999}` to `cloudCalcs` and asserts the loop terminates within the clamped bound.
+**Known gaps:** None introduced by this run. The existing `resolveProcessingLimits.test.js` suite is the full regression coverage for this CWE-770 guard; no additional test was needed since no new behavior was added.
