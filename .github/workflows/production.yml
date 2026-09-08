@@ -71,9 +71,18 @@ jobs:
           flutter pub get
 
       - name: Build Flutter Web
+        env:
+          GMAPS_API_KEY: ${{ secrets.GMAPS_API_KEY }}
         run: |
           cd app
-          flutter build web --release
+          flutter build web --release --dart-define=GMAPS_API_KEY="$GMAPS_API_KEY"
+
+      # Key was scrubbed from source (P0 2026-06-10); web/index.html ships a
+      # placeholder that gets substituted into the build artifact here.
+      - name: Inject Google Maps API key into web build
+        env:
+          GMAPS_API_KEY: ${{ secrets.GMAPS_API_KEY }}
+        run: node scripts/inject-gmaps-key.mjs app/build/web/index.html
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0

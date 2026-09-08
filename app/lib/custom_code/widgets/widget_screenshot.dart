@@ -41,12 +41,18 @@ class WidgetScreenshot extends StatefulWidget {
 class _WidgetScreenshotState extends State<WidgetScreenshot> {
   final GlobalKey _repaintKey = GlobalKey();
 
-  // Replace with your actual Google Maps Static API Key
-  static const String googleMapsApiKey =
-      'AIzaSyBJDJQZEJh6kRfdslUQ8uEbzVsRSW-WwFc'; // IMPORTANT: Replace with your actual API key
+  // Google Maps Static API key — injected at build time via
+  // --dart-define=GMAPS_API_KEY=... (never commit the key literal here).
+  // Defaults to empty; _fetchStaticMapImage degrades gracefully without it.
+  static const String googleMapsApiKey = String.fromEnvironment('GMAPS_API_KEY');
 
   Future<Uint8List?> _fetchStaticMapImage(
       int zoom, LatLng center, List<LatLng> additionalMarkers) async {
+    if (googleMapsApiKey.isEmpty) {
+      print(
+          'WARNING: GMAPS_API_KEY not set (pass --dart-define=GMAPS_API_KEY=...); skipping static map image.');
+      return null;
+    }
     // Renamed for clarity
     const String size = '600x300';
 
@@ -70,7 +76,7 @@ class _WidgetScreenshotState extends State<WidgetScreenshot> {
     final String mapUrl =
         'https://maps.googleapis.com/maps/api/staticmap?center=$formattedCenter&zoom=$zoom&size=$size$markersString&key=$googleMapsApiKey';
 
-    print('Constructed Static Map URL: $mapUrl'); // For debugging
+    // NOTE: do not log mapUrl — it contains the API key.
 
     try {
       final response = await http.get(Uri.parse(mapUrl));

@@ -1,2 +1,8 @@
 #include "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"
 #include "Generated.xcconfig"
+
+// Google Maps API key — empty default so builds do not hard-fail without
+// a key. Overridden by Secrets.xcconfig when present (gitignored; copy
+// Secrets.xcconfig.example). CI can also write Secrets.xcconfig from env.
+GMAPS_API_KEY =
+#include? "Secrets.xcconfig"
