@@ -191,10 +191,29 @@ setGlobalOptions({
   minInstances: 0,
 });
 
+// CWE-346: known RealDeal frontend origins allowed to read cross-origin
+// responses. Requests from any other origin (or with no Origin header, e.g.
+// native/FlutterFlow HTTP clients, which ignore CORS entirely) still get
+// processed normally — they just don't get an Access-Control-Allow-Origin
+// header, so a browser won't hand the response to an untrusted page's JS.
+const CLOUD_CALCS_SYNC_ALLOWED_ORIGINS = new Set([
+  "https://getrealdeal.ai",
+  "https://app.getrealdeal.ai",
+  "https://habu-1gxak2.web.app",
+  "https://habu-1gxak2.firebaseapp.com",
+  "http://localhost:8080",
+]);
+
+function resolveCloudCalcsSyncOrigin(req) {
+  const origin = req.get("Origin");
+  return origin && CLOUD_CALCS_SYNC_ALLOWED_ORIGINS.has(origin) ? origin : null;
+}
+
 // Non-streaming endpoint for FlutterFlow compatibility
 exports.cloudCalcsSync = onRequest({secrets: [oaDataApiUrl]}, async (req, res) => {
+  const allowedOrigin = resolveCloudCalcsSyncOrigin(req);
   res.set({
-    "Access-Control-Allow-Origin": "*",
+    ...(allowedOrigin ? {"Access-Control-Allow-Origin": allowedOrigin, "Vary": "Origin"} : {}),
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
   });
