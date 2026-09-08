@@ -27,4 +27,31 @@ async function requireFirebaseAuth(req, res) {
   }
 }
 
-module.exports = {requireFirebaseAuth};
+/**
+ * Verifies the caller is only reading/writing the HubSpot record for their
+ * *own* account (CWE-639: Authorization Bypass Through User-Controlled Key).
+ * `requireFirebaseAuth` alone only proves the caller has some valid Firebase
+ * session — it does not prove they're allowed to act on the `email` they
+ * supplied in the request body/query. This closes that gap by requiring the
+ * decoded token's `email` claim to match the requested email.
+ *
+ * Anonymous Firebase sessions have no `email` claim and always fail this
+ * check — there is no verified identity to bind the request to.
+ *
+ * On success, returns true. On failure, writes a 403 JSON response (with
+ * CORS still applied) and returns false — callers must return immediately
+ * when this returns false.
+ */
+function requireOwnEmail(decodedToken, email, res) {
+  const tokenEmail = typeof decodedToken.email === "string" ? decodedToken.email.toLowerCase() : null;
+  const requestedEmail = typeof email === "string" ? email.toLowerCase() : null;
+
+  if (!tokenEmail || !requestedEmail || tokenEmail !== requestedEmail) {
+    res.set({"Access-Control-Allow-Origin": "*"});
+    res.status(403).json({error: "Forbidden: email must match the authenticated account"});
+    return false;
+  }
+  return true;
+}
+
+module.exports = {requireFirebaseAuth, requireOwnEmail};

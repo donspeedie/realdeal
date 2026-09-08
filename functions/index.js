@@ -12,7 +12,7 @@ const oaDataApiUrl = defineSecret("OA_DATA_API_URL");
 const hubspotApiKey = defineSecret("HUBSPOT_API_KEY");
 const sendgridApiKey = defineSecret("SENDGRID_API_KEY");
 const {initSSE} = require("./sseWriter");
-const {requireFirebaseAuth} = require("./authGuard");
+const {requireFirebaseAuth, requireOwnEmail} = require("./authGuard");
 const {safeKeys} = require("./logSafety");
 const {fetchZillowDataWithCache, isValidLocation} = require("./oaDataApi");
 const {processProperty} = require("./propertyProcessor");
@@ -534,7 +534,8 @@ exports.hubspotTrackCalculation = onRequest({secrets: [hubspotApiKey]}, async (r
     return res.status(204).send("");
   }
 
-  if (!(await requireFirebaseAuth(req, res))) return;
+  const decodedToken = await requireFirebaseAuth(req, res);
+  if (!decodedToken) return;
 
   try {
     const {email, firstName, lastName, phone, address, method} = req.body;
@@ -542,6 +543,8 @@ exports.hubspotTrackCalculation = onRequest({secrets: [hubspotApiKey]}, async (r
     if (!email) {
       return res.status(400).json({error: "Email is required"});
     }
+
+    if (!requireOwnEmail(decodedToken, email, res)) return;
 
     if (!address) {
       return res.status(400).json({error: "Property address is required"});
@@ -587,7 +590,8 @@ exports.hubspotCreateContact = onRequest({secrets: [hubspotApiKey]}, async (req,
     return res.status(204).send("");
   }
 
-  if (!(await requireFirebaseAuth(req, res))) return;
+  const decodedToken = await requireFirebaseAuth(req, res);
+  if (!decodedToken) return;
 
   try {
     const {email, firstName, lastName, phone, customProperties} = req.body;
@@ -595,6 +599,8 @@ exports.hubspotCreateContact = onRequest({secrets: [hubspotApiKey]}, async (req,
     if (!email) {
       return res.status(400).json({error: "Email is required"});
     }
+
+    if (!requireOwnEmail(decodedToken, email, res)) return;
 
     const contact = await createOrUpdateContact({
       email,
@@ -631,7 +637,8 @@ exports.hubspotFindContact = onRequest({secrets: [hubspotApiKey]}, async (req, r
     return res.status(204).send("");
   }
 
-  if (!(await requireFirebaseAuth(req, res))) return;
+  const decodedToken = await requireFirebaseAuth(req, res);
+  if (!decodedToken) return;
 
   try {
     const email = req.body?.email || req.query?.email;
@@ -639,6 +646,8 @@ exports.hubspotFindContact = onRequest({secrets: [hubspotApiKey]}, async (req, r
     if (!email) {
       return res.status(400).json({error: "Email is required"});
     }
+
+    if (!requireOwnEmail(decodedToken, email, res)) return;
 
     const contact = await findContactByEmail(email);
 

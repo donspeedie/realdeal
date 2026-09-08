@@ -3,7 +3,7 @@ jest.mock("firebase-admin", () => ({
   auth: () => ({verifyIdToken: mockVerifyIdToken}),
 }));
 
-const {requireFirebaseAuth} = require("../authGuard");
+const {requireFirebaseAuth, requireOwnEmail} = require("../authGuard");
 
 function mockRes() {
   return {
@@ -69,5 +69,36 @@ describe("requireFirebaseAuth — CWE-306 shared auth guard", () => {
     expect(result).toEqual({uid: "user-123"});
     expect(res._status).toBeUndefined();
     expect(mockVerifyIdToken).toHaveBeenCalledWith("good-token");
+  });
+});
+
+describe("requireOwnEmail — CWE-639 caller-owns-key guard", () => {
+  test("rejects with 403 when the token has no email claim (anonymous session)", () => {
+    const res = mockRes();
+    const result = requireOwnEmail({uid: "anon-1"}, "someone@example.com", res);
+    expect(result).toBe(false);
+    expect(res._status).toBe(403);
+    expect(res._headers["Access-Control-Allow-Origin"]).toBe("*");
+  });
+
+  test("rejects with 403 when the requested email is missing", () => {
+    const res = mockRes();
+    const result = requireOwnEmail({uid: "user-1", email: "user@example.com"}, undefined, res);
+    expect(result).toBe(false);
+    expect(res._status).toBe(403);
+  });
+
+  test("rejects with 403 when the requested email does not match the token's email", () => {
+    const res = mockRes();
+    const result = requireOwnEmail({uid: "user-1", email: "user@example.com"}, "other@example.com", res);
+    expect(result).toBe(false);
+    expect(res._status).toBe(403);
+  });
+
+  test("allows a case-insensitive match between token email and requested email", () => {
+    const res = mockRes();
+    const result = requireOwnEmail({uid: "user-1", email: "User@Example.com"}, "user@example.com", res);
+    expect(result).toBe(true);
+    expect(res._status).toBeUndefined();
   });
 });
