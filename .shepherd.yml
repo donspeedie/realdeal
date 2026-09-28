@@ -3,7 +3,7 @@
 # conflict checks, isolation, rate caps and the circuit breaker still apply.
 owner: don
 auto_publish: true
-auto_merge_to_default: true
+auto_merge_to_default: false  # owner decision D-A option B (2026-09-27): only Don names merges
 auto_merge_to_secondary: true
 # YAML positive infinity removes the LOC-only human approval gate.
 max_loc_for_auto_merge: .inf
